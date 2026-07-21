@@ -1,0 +1,23 @@
+{
+  "name": "@vibegate/contracts",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "check:types": "tsc -p tsconfig.json --noEmit",
+    "gen:schema": "tsx scripts/gen-schema.ts",
+    "check:schema": "tsx scripts/gen-schema.ts && git diff --exit-code -- generated",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1"
+  },
+  "devDependencies": {
+    "ts-json-schema-generator": "^2.3.0"
+  }
+}

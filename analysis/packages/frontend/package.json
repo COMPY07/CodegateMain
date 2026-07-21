@@ -1,0 +1,21 @@
+{
+  "name": "@vibegate/frontend",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@vibegate/contracts": "workspace:*",
+    "typescript": "^5.7.2"
+  },
+  "devDependencies": {
+    "@vibegate/engine": "workspace:*"
+  }
+}

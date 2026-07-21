@@ -1,0 +1,18 @@
+{
+  "name": "@vibegate/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "vibegate": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@vibegate/contracts": "workspace:*",
+    "@vibegate/engine": "workspace:*",
+    "@vibegate/frontend": "workspace:*"
+  }
+}

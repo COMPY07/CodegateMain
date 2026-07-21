@@ -1,0 +1,620 @@
+{
+  "$ref": "#/definitions/SecurityProveInput",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "AnalysisScope": {
+      "additionalProperties": false,
+      "properties": {
+        "buildProfile": {
+          "enum": [
+            "production",
+            "development"
+          ],
+          "type": "string"
+        },
+        "includeDatabasePolicies": {
+          "type": "boolean"
+        },
+        "includeMiddleware": {
+          "type": "boolean"
+        },
+        "includeOrmExtensions": {
+          "type": "boolean"
+        },
+        "maximumCallDepth": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "buildProfile",
+        "includeMiddleware",
+        "includeOrmExtensions",
+        "includeDatabasePolicies",
+        "maximumCallDepth"
+      ],
+      "type": "object"
+    },
+    "Attacker": {
+      "additionalProperties": false,
+      "properties": {
+        "constraints": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "principalType": {
+          "enum": [
+            "authenticated_user",
+            "anonymous"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "principalType",
+        "constraints"
+      ],
+      "type": "object"
+    },
+    "AttackerControl": {
+      "additionalProperties": false,
+      "properties": {
+        "semanticRole": {
+          "enum": [
+            "resource_identifier",
+            "query_fragment",
+            "redirect_target"
+          ],
+          "type": "string"
+        },
+        "value": {
+          "$ref": "#/definitions/ValueRef"
+        }
+      },
+      "required": [
+        "value",
+        "semanticRole"
+      ],
+      "type": "object"
+    },
+    "BoundaryPreservesPropertyProof": {
+      "additionalProperties": false,
+      "properties": {
+        "allowlist": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "analysisScope": {
+          "$ref": "#/definitions/AnalysisScope"
+        },
+        "attacker": {
+          "$ref": "#/definitions/Attacker"
+        },
+        "attackerControl": {
+          "items": {
+            "$ref": "#/definitions/AttackerControl"
+          },
+          "type": "array"
+        },
+        "claim": {
+          "const": "EXISTS_VIOLATING_PATH",
+          "type": "string"
+        },
+        "entrypoint": {
+          "$ref": "#/definitions/EntrypointRef"
+        },
+        "requiredInvariants": {
+          "items": {
+            "$ref": "#/definitions/RequiredInvariant"
+          },
+          "type": "array"
+        },
+        "subjectSymbol": {
+          "$ref": "#/definitions/SymbolId"
+        },
+        "targetEffect": {
+          "$ref": "#/definitions/TargetEffect"
+        },
+        "template": {
+          "const": "BOUNDARY_PRESERVES_PROPERTY",
+          "type": "string"
+        }
+      },
+      "required": [
+        "claim",
+        "template",
+        "attacker",
+        "entrypoint",
+        "attackerControl",
+        "targetEffect",
+        "requiredInvariants",
+        "allowlist",
+        "analysisScope"
+      ],
+      "type": "object"
+    },
+    "DataReachesInterpreterProof": {
+      "additionalProperties": false,
+      "properties": {
+        "analysisScope": {
+          "$ref": "#/definitions/AnalysisScope"
+        },
+        "attacker": {
+          "$ref": "#/definitions/Attacker"
+        },
+        "attackerControl": {
+          "items": {
+            "$ref": "#/definitions/AttackerControl"
+          },
+          "type": "array"
+        },
+        "claim": {
+          "const": "EXISTS_VIOLATING_PATH",
+          "type": "string"
+        },
+        "entrypoint": {
+          "$ref": "#/definitions/EntrypointRef"
+        },
+        "requiredInvariants": {
+          "items": {
+            "$ref": "#/definitions/RequiredInvariant"
+          },
+          "type": "array"
+        },
+        "subjectSymbol": {
+          "$ref": "#/definitions/SymbolId"
+        },
+        "targetEffect": {
+          "$ref": "#/definitions/TargetEffect"
+        },
+        "template": {
+          "const": "DATA_REACHES_INTERPRETER",
+          "type": "string"
+        }
+      },
+      "required": [
+        "claim",
+        "template",
+        "attacker",
+        "entrypoint",
+        "attackerControl",
+        "targetEffect",
+        "requiredInvariants",
+        "analysisScope"
+      ],
+      "type": "object"
+    },
+    "EffectKind": {
+      "enum": [
+        "DB_READ",
+        "DB_CREATE",
+        "DB_UPDATE",
+        "DB_DELETE",
+        "RAW_SQL_EXECUTE",
+        "HTML_RENDER",
+        "OUTBOUND_REQUEST",
+        "COMMAND_EXECUTE",
+        "TOKEN_ISSUE",
+        "REDIRECT"
+      ],
+      "type": "string"
+    },
+    "EffectRequiresRelationProof": {
+      "additionalProperties": false,
+      "properties": {
+        "analysisScope": {
+          "$ref": "#/definitions/AnalysisScope"
+        },
+        "attacker": {
+          "$ref": "#/definitions/Attacker"
+        },
+        "attackerControl": {
+          "items": {
+            "$ref": "#/definitions/AttackerControl"
+          },
+          "type": "array"
+        },
+        "claim": {
+          "const": "EXISTS_VIOLATING_PATH",
+          "type": "string"
+        },
+        "entrypoint": {
+          "$ref": "#/definitions/EntrypointRef"
+        },
+        "requiredInvariants": {
+          "items": {
+            "$ref": "#/definitions/RequiredInvariant"
+          },
+          "type": "array"
+        },
+        "subjectSymbol": {
+          "$ref": "#/definitions/SymbolId"
+        },
+        "targetEffect": {
+          "$ref": "#/definitions/TargetEffect"
+        },
+        "template": {
+          "const": "EFFECT_REQUIRES_RELATION",
+          "type": "string"
+        }
+      },
+      "required": [
+        "claim",
+        "template",
+        "attacker",
+        "entrypoint",
+        "attackerControl",
+        "targetEffect",
+        "requiredInvariants",
+        "analysisScope"
+      ],
+      "type": "object"
+    },
+    "EffectRequiresStateProof": {
+      "additionalProperties": false,
+      "properties": {
+        "analysisScope": {
+          "$ref": "#/definitions/AnalysisScope"
+        },
+        "attacker": {
+          "$ref": "#/definitions/Attacker"
+        },
+        "attackerControl": {
+          "items": {
+            "$ref": "#/definitions/AttackerControl"
+          },
+          "type": "array"
+        },
+        "claim": {
+          "const": "EXISTS_VIOLATING_PATH",
+          "type": "string"
+        },
+        "entrypoint": {
+          "$ref": "#/definitions/EntrypointRef"
+        },
+        "requiredInvariants": {
+          "items": {
+            "$ref": "#/definitions/RequiredInvariant"
+          },
+          "type": "array"
+        },
+        "requiredState": {
+          "additionalProperties": false,
+          "properties": {
+            "field": {
+              "type": "string"
+            },
+            "value": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "field",
+            "value"
+          ],
+          "type": "object"
+        },
+        "subjectSymbol": {
+          "$ref": "#/definitions/SymbolId"
+        },
+        "targetEffect": {
+          "$ref": "#/definitions/TargetEffect"
+        },
+        "template": {
+          "const": "EFFECT_REQUIRES_STATE",
+          "type": "string"
+        }
+      },
+      "required": [
+        "claim",
+        "template",
+        "attacker",
+        "entrypoint",
+        "attackerControl",
+        "targetEffect",
+        "requiredInvariants",
+        "requiredState",
+        "analysisScope"
+      ],
+      "type": "object"
+    },
+    "EntrypointRef": {
+      "additionalProperties": false,
+      "properties": {
+        "nodeId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "nodeId"
+      ],
+      "type": "object"
+    },
+    "ExceptionFailsClosedProof": {
+      "additionalProperties": false,
+      "properties": {
+        "analysisScope": {
+          "$ref": "#/definitions/AnalysisScope"
+        },
+        "attacker": {
+          "$ref": "#/definitions/Attacker"
+        },
+        "attackerControl": {
+          "items": {
+            "$ref": "#/definitions/AttackerControl"
+          },
+          "type": "array"
+        },
+        "claim": {
+          "const": "EXISTS_VIOLATING_PATH",
+          "type": "string"
+        },
+        "entrypoint": {
+          "$ref": "#/definitions/EntrypointRef"
+        },
+        "requiredInvariants": {
+          "items": {
+            "$ref": "#/definitions/RequiredInvariant"
+          },
+          "type": "array"
+        },
+        "subjectSymbol": {
+          "$ref": "#/definitions/SymbolId"
+        },
+        "targetEffect": {
+          "$ref": "#/definitions/TargetEffect"
+        },
+        "template": {
+          "const": "EXCEPTION_FAILS_CLOSED",
+          "type": "string"
+        }
+      },
+      "required": [
+        "claim",
+        "template",
+        "attacker",
+        "entrypoint",
+        "attackerControl",
+        "targetEffect",
+        "requiredInvariants",
+        "analysisScope"
+      ],
+      "type": "object"
+    },
+    "Proof": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/EffectRequiresRelationProof"
+        },
+        {
+          "$ref": "#/definitions/DataReachesInterpreterProof"
+        },
+        {
+          "$ref": "#/definitions/EffectRequiresStateProof"
+        },
+        {
+          "$ref": "#/definitions/BoundaryPreservesPropertyProof"
+        },
+        {
+          "$ref": "#/definitions/ExceptionFailsClosedProof"
+        },
+        {
+          "$ref": "#/definitions/WebhookSignatureProof"
+        }
+      ]
+    },
+    "RequiredInvariant": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "RELATION_ESTABLISHED",
+            "BLOCKING_GUARD"
+          ],
+          "type": "string"
+        },
+        "left": {
+          "$ref": "#/definitions/ValueRef"
+        },
+        "op": {
+          "enum": [
+            "EQ",
+            "NEQ"
+          ],
+          "type": "string"
+        },
+        "predicate": {
+          "type": "string"
+        },
+        "right": {
+          "$ref": "#/definitions/ValueRef"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "type": "object"
+    },
+    "SecurityProveInput": {
+      "additionalProperties": false,
+      "properties": {
+        "proof": {
+          "$ref": "#/definitions/Proof"
+        },
+        "snapshot": {
+          "$ref": "#/definitions/SnapshotRef"
+        }
+      },
+      "required": [
+        "proof",
+        "snapshot"
+      ],
+      "type": "object"
+    },
+    "SnapshotRef": {
+      "additionalProperties": false,
+      "properties": {
+        "root": {
+          "type": "string"
+        },
+        "snapshotId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "root",
+        "snapshotId"
+      ],
+      "type": "object"
+    },
+    "SymbolId": {
+      "type": "string"
+    },
+    "TargetEffect": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "$ref": "#/definitions/EffectKind"
+        },
+        "resource": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "resource"
+      ],
+      "type": "object"
+    },
+    "ValueRef": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/ValueRefSymbol"
+        },
+        {
+          "$ref": "#/definitions/ValueRefField"
+        },
+        {
+          "$ref": "#/definitions/ValueRefLiteral"
+        }
+      ]
+    },
+    "ValueRefField": {
+      "additionalProperties": false,
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/ValueRef"
+        },
+        "kind": {
+          "const": "field",
+          "type": "string"
+        },
+        "path": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind",
+        "base",
+        "path"
+      ],
+      "type": "object"
+    },
+    "ValueRefLiteral": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "literal",
+          "type": "string"
+        },
+        "value": {
+          "type": [
+            "string",
+            "number",
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "kind",
+        "value"
+      ],
+      "type": "object"
+    },
+    "ValueRefSymbol": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "symbol",
+          "type": "string"
+        },
+        "symbolId": {
+          "$ref": "#/definitions/SymbolId"
+        }
+      },
+      "required": [
+        "kind",
+        "symbolId"
+      ],
+      "type": "object"
+    },
+    "WebhookSignatureProof": {
+      "additionalProperties": false,
+      "properties": {
+        "analysisScope": {
+          "$ref": "#/definitions/AnalysisScope"
+        },
+        "attacker": {
+          "$ref": "#/definitions/Attacker"
+        },
+        "attackerControl": {
+          "items": {
+            "$ref": "#/definitions/AttackerControl"
+          },
+          "type": "array"
+        },
+        "claim": {
+          "const": "EXISTS_VIOLATING_PATH",
+          "type": "string"
+        },
+        "entrypoint": {
+          "$ref": "#/definitions/EntrypointRef"
+        },
+        "requiredInvariants": {
+          "items": {
+            "$ref": "#/definitions/RequiredInvariant"
+          },
+          "type": "array"
+        },
+        "subjectSymbol": {
+          "$ref": "#/definitions/SymbolId"
+        },
+        "targetEffect": {
+          "$ref": "#/definitions/TargetEffect"
+        },
+        "template": {
+          "const": "WEBHOOK_SIGNATURE_REQUIRED",
+          "type": "string"
+        }
+      },
+      "required": [
+        "claim",
+        "template",
+        "attacker",
+        "entrypoint",
+        "attackerControl",
+        "targetEffect",
+        "requiredInvariants",
+        "analysisScope"
+      ],
+      "type": "object"
+    }
+  }
+}

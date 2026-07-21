@@ -1,0 +1,700 @@
+{
+  "$ref": "#/definitions/SemanticIR",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "ArgFlow": {
+      "additionalProperties": false,
+      "properties": {
+        "argIndex": {
+          "type": "number"
+        },
+        "value": {
+          "$ref": "#/definitions/ValueRef"
+        }
+      },
+      "required": [
+        "argIndex",
+        "value"
+      ],
+      "type": "object"
+    },
+    "BasicBlockIR": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/BlockId"
+        },
+        "operations": {
+          "items": {
+            "$ref": "#/definitions/OperationIR"
+          },
+          "type": "array"
+        },
+        "terminator": {
+          "$ref": "#/definitions/TerminatorIR"
+        }
+      },
+      "required": [
+        "id",
+        "operations",
+        "terminator"
+      ],
+      "type": "object"
+    },
+    "BlockId": {
+      "type": "string"
+    },
+    "CallEdgeIR": {
+      "additionalProperties": false,
+      "properties": {
+        "argFlows": {
+          "items": {
+            "$ref": "#/definitions/ArgFlow"
+          },
+          "type": "array"
+        },
+        "block": {
+          "$ref": "#/definitions/BlockId"
+        },
+        "callee": {
+          "$ref": "#/definitions/SymbolId"
+        },
+        "caller": {
+          "$ref": "#/definitions/SymbolId"
+        },
+        "resolution": {
+          "$ref": "#/definitions/CallResolution"
+        },
+        "span": {
+          "$ref": "#/definitions/SourceSpan"
+        }
+      },
+      "required": [
+        "caller",
+        "resolution",
+        "block",
+        "argFlows",
+        "span"
+      ],
+      "type": "object"
+    },
+    "CallResolution": {
+      "enum": [
+        "DIRECT",
+        "IMPORTED",
+        "METHOD",
+        "UNRESOLVED"
+      ],
+      "type": "string"
+    },
+    "EffectIR": {
+      "additionalProperties": false,
+      "properties": {
+        "block": {
+          "$ref": "#/definitions/BlockId"
+        },
+        "clientSymbol": {
+          "$ref": "#/definitions/ValueRef"
+        },
+        "effectKind": {
+          "$ref": "#/definitions/EffectKind"
+        },
+        "inFunction": {
+          "$ref": "#/definitions/SymbolId"
+        },
+        "interpreterContext": {
+          "enum": [
+            "SQL",
+            "HTML_BODY",
+            "SHELL"
+          ],
+          "type": "string"
+        },
+        "interpreterSafety": {
+          "$ref": "#/definitions/InterpreterSafety"
+        },
+        "nodeId": {
+          "$ref": "#/definitions/NodeId"
+        },
+        "resource": {
+          "type": "string"
+        },
+        "selector": {
+          "$ref": "#/definitions/ValueRef"
+        },
+        "span": {
+          "$ref": "#/definitions/SourceSpan"
+        }
+      },
+      "required": [
+        "nodeId",
+        "effectKind",
+        "resource",
+        "selector",
+        "inFunction",
+        "block",
+        "span"
+      ],
+      "type": "object"
+    },
+    "EffectKind": {
+      "enum": [
+        "DB_READ",
+        "DB_CREATE",
+        "DB_UPDATE",
+        "DB_DELETE",
+        "RAW_SQL_EXECUTE",
+        "HTML_RENDER",
+        "OUTBOUND_REQUEST",
+        "COMMAND_EXECUTE",
+        "TOKEN_ISSUE",
+        "REDIRECT"
+      ],
+      "type": "string"
+    },
+    "EntrypointIR": {
+      "additionalProperties": false,
+      "properties": {
+        "externallyReachable": {
+          "type": "boolean"
+        },
+        "handler": {
+          "$ref": "#/definitions/SymbolId"
+        },
+        "kind": {
+          "enum": [
+            "route_handler",
+            "server_action"
+          ],
+          "type": "string"
+        },
+        "method": {
+          "type": "string"
+        },
+        "nodeId": {
+          "$ref": "#/definitions/NodeId"
+        },
+        "path": {
+          "type": "string"
+        },
+        "span": {
+          "$ref": "#/definitions/SourceSpan"
+        }
+      },
+      "required": [
+        "nodeId",
+        "kind",
+        "handler",
+        "externallyReachable",
+        "span"
+      ],
+      "type": "object"
+    },
+    "EvidenceRef": {
+      "additionalProperties": false,
+      "properties": {
+        "note": {
+          "type": "string"
+        },
+        "span": {
+          "$ref": "#/definitions/SourceSpan"
+        }
+      },
+      "required": [
+        "span",
+        "note"
+      ],
+      "type": "object"
+    },
+    "ExternalPolicyIR": {
+      "additionalProperties": false,
+      "properties": {
+        "clientRef": {
+          "$ref": "#/definitions/ValueRef"
+        },
+        "evidence": {
+          "$ref": "#/definitions/EvidenceRef"
+        },
+        "kind": {
+          "$ref": "#/definitions/ExternalPolicyKind"
+        },
+        "prismaFacts": {
+          "$ref": "#/definitions/PrismaExtensionFacts"
+        },
+        "resource": {
+          "type": "string"
+        },
+        "rlsFacts": {
+          "$ref": "#/definitions/RlsFacts"
+        },
+        "status": {
+          "$ref": "#/definitions/ExternalPolicyStatus"
+        }
+      },
+      "required": [
+        "kind",
+        "resource",
+        "status",
+        "evidence"
+      ],
+      "type": "object"
+    },
+    "ExternalPolicyKind": {
+      "enum": [
+        "PRISMA_EXTENSION",
+        "DATABASE_RLS",
+        "MIDDLEWARE",
+        "SERVICE_WRAPPER"
+      ],
+      "type": "string"
+    },
+    "ExternalPolicyStatus": {
+      "enum": [
+        "DECLARED_BUT_UNAVAILABLE",
+        "RESOLVED",
+        "RESOLVED_NOT_APPLICABLE"
+      ],
+      "type": "string"
+    },
+    "FunctionIR": {
+      "additionalProperties": false,
+      "properties": {
+        "blocks": {
+          "items": {
+            "$ref": "#/definitions/BasicBlockIR"
+          },
+          "type": "array"
+        },
+        "entryBlock": {
+          "$ref": "#/definitions/BlockId"
+        },
+        "symbolId": {
+          "$ref": "#/definitions/SymbolId"
+        }
+      },
+      "required": [
+        "symbolId",
+        "entryBlock",
+        "blocks"
+      ],
+      "type": "object"
+    },
+    "GuardIR": {
+      "additionalProperties": false,
+      "properties": {
+        "block": {
+          "$ref": "#/definitions/BlockId"
+        },
+        "boundParam": {
+          "type": "number"
+        },
+        "establishes": {
+          "enum": [
+            "authentication",
+            "resource_relation",
+            "resource_state",
+            "signature_verified"
+          ],
+          "type": "string"
+        },
+        "failOpen": {
+          "type": "boolean"
+        },
+        "inFunction": {
+          "$ref": "#/definitions/SymbolId"
+        },
+        "nodeId": {
+          "$ref": "#/definitions/NodeId"
+        },
+        "predicate": {
+          "$ref": "#/definitions/RelationPredicate"
+        },
+        "targetEffectId": {
+          "$ref": "#/definitions/NodeId"
+        }
+      },
+      "required": [
+        "nodeId",
+        "predicate",
+        "inFunction",
+        "block",
+        "establishes"
+      ],
+      "type": "object"
+    },
+    "InterpreterSafety": {
+      "enum": [
+        "PARAMETERIZED",
+        "TAINTED",
+        "CONSTANT",
+        "SANITIZED",
+        "UNKNOWN"
+      ],
+      "type": "string"
+    },
+    "NodeId": {
+      "type": "string"
+    },
+    "OperationIR": {
+      "additionalProperties": false,
+      "properties": {
+        "effectId": {
+          "$ref": "#/definitions/NodeId"
+        },
+        "guard": {
+          "$ref": "#/definitions/RelationPredicate"
+        },
+        "kind": {
+          "enum": [
+            "call",
+            "assign",
+            "guard",
+            "effect"
+          ],
+          "type": "string"
+        },
+        "nodeId": {
+          "$ref": "#/definitions/NodeId"
+        },
+        "span": {
+          "$ref": "#/definitions/SourceSpan"
+        }
+      },
+      "required": [
+        "nodeId",
+        "kind",
+        "span"
+      ],
+      "type": "object"
+    },
+    "PrincipalSourceIR": {
+      "additionalProperties": false,
+      "properties": {
+        "nodeId": {
+          "$ref": "#/definitions/NodeId"
+        },
+        "span": {
+          "$ref": "#/definitions/SourceSpan"
+        },
+        "tenantClaim": {
+          "$ref": "#/definitions/ValueRef"
+        }
+      },
+      "required": [
+        "nodeId",
+        "tenantClaim",
+        "span"
+      ],
+      "type": "object"
+    },
+    "PrismaExtensionFacts": {
+      "additionalProperties": false,
+      "properties": {
+        "addsRequiredRelation": {
+          "type": "boolean"
+        },
+        "appliesToTargetEffect": {
+          "type": "boolean"
+        },
+        "exactClientUsed": {
+          "type": "boolean"
+        },
+        "noBypassingPath": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "exactClientUsed",
+        "appliesToTargetEffect",
+        "addsRequiredRelation",
+        "noBypassingPath"
+      ],
+      "type": "object"
+    },
+    "RelationOp": {
+      "enum": [
+        "EQ",
+        "NEQ",
+        "IN",
+        "NIN"
+      ],
+      "type": "string"
+    },
+    "RelationPredicate": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence": {
+          "$ref": "#/definitions/EvidenceRef"
+        },
+        "left": {
+          "$ref": "#/definitions/ValueRef"
+        },
+        "op": {
+          "$ref": "#/definitions/RelationOp"
+        },
+        "right": {
+          "$ref": "#/definitions/ValueRef"
+        }
+      },
+      "required": [
+        "left",
+        "op",
+        "right",
+        "evidence"
+      ],
+      "type": "object"
+    },
+    "ResourceIR": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "ownerColumn": {
+          "type": "string"
+        },
+        "tenantColumn": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "RlsFacts": {
+      "additionalProperties": false,
+      "properties": {
+        "forceApplied": {
+          "type": "boolean"
+        },
+        "noBypassingPath": {
+          "type": "boolean"
+        },
+        "tableMatches": {
+          "type": "boolean"
+        },
+        "tenantPredicatePresent": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "tableMatches",
+        "tenantPredicatePresent",
+        "forceApplied",
+        "noBypassingPath"
+      ],
+      "type": "object"
+    },
+    "SemanticIR": {
+      "additionalProperties": false,
+      "properties": {
+        "analyzedDefenses": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "callEdges": {
+          "items": {
+            "$ref": "#/definitions/CallEdgeIR"
+          },
+          "type": "array"
+        },
+        "effects": {
+          "items": {
+            "$ref": "#/definitions/EffectIR"
+          },
+          "type": "array"
+        },
+        "entrypoints": {
+          "items": {
+            "$ref": "#/definitions/EntrypointIR"
+          },
+          "type": "array"
+        },
+        "externalPolicies": {
+          "items": {
+            "$ref": "#/definitions/ExternalPolicyIR"
+          },
+          "type": "array"
+        },
+        "functions": {
+          "items": {
+            "$ref": "#/definitions/FunctionIR"
+          },
+          "type": "array"
+        },
+        "guards": {
+          "items": {
+            "$ref": "#/definitions/GuardIR"
+          },
+          "type": "array"
+        },
+        "principalSources": {
+          "items": {
+            "$ref": "#/definitions/PrincipalSourceIR"
+          },
+          "type": "array"
+        },
+        "resources": {
+          "items": {
+            "$ref": "#/definitions/ResourceIR"
+          },
+          "type": "array"
+        },
+        "schemaVersion": {
+          "const": 1,
+          "type": "number"
+        },
+        "snapshot": {
+          "$ref": "#/definitions/SnapshotId"
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "snapshot",
+        "functions",
+        "entrypoints",
+        "effects",
+        "guards",
+        "principalSources",
+        "resources",
+        "externalPolicies",
+        "callEdges",
+        "analyzedDefenses"
+      ],
+      "type": "object"
+    },
+    "SnapshotId": {
+      "type": "string"
+    },
+    "SourceSpan": {
+      "additionalProperties": false,
+      "properties": {
+        "end": {
+          "type": "number"
+        },
+        "file": {
+          "type": "string"
+        },
+        "start": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "file",
+        "start",
+        "end"
+      ],
+      "type": "object"
+    },
+    "SymbolId": {
+      "type": "string"
+    },
+    "TerminatorIR": {
+      "additionalProperties": false,
+      "properties": {
+        "condition": {
+          "$ref": "#/definitions/RelationPredicate"
+        },
+        "kind": {
+          "enum": [
+            "return",
+            "branch",
+            "goto",
+            "throw"
+          ],
+          "type": "string"
+        },
+        "successors": {
+          "items": {
+            "$ref": "#/definitions/BlockId"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind",
+        "successors"
+      ],
+      "type": "object"
+    },
+    "ValueRef": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/ValueRefSymbol"
+        },
+        {
+          "$ref": "#/definitions/ValueRefField"
+        },
+        {
+          "$ref": "#/definitions/ValueRefLiteral"
+        }
+      ]
+    },
+    "ValueRefField": {
+      "additionalProperties": false,
+      "properties": {
+        "base": {
+          "$ref": "#/definitions/ValueRef"
+        },
+        "kind": {
+          "const": "field",
+          "type": "string"
+        },
+        "path": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "kind",
+        "base",
+        "path"
+      ],
+      "type": "object"
+    },
+    "ValueRefLiteral": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "literal",
+          "type": "string"
+        },
+        "value": {
+          "type": [
+            "string",
+            "number",
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "kind",
+        "value"
+      ],
+      "type": "object"
+    },
+    "ValueRefSymbol": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "symbol",
+          "type": "string"
+        },
+        "symbolId": {
+          "$ref": "#/definitions/SymbolId"
+        }
+      },
+      "required": [
+        "kind",
+        "symbolId"
+      ],
+      "type": "object"
+    }
+  }
+}

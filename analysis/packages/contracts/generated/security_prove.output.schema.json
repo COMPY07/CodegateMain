@@ -1,0 +1,368 @@
+{
+  "$ref": "#/definitions/SecurityProveOutput",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "AnalysisCoverage": {
+      "additionalProperties": false,
+      "properties": {
+        "counterevidence": {
+          "$ref": "#/definitions/CounterevidenceCoverage"
+        },
+        "pathEnumeration": {
+          "$ref": "#/definitions/PathCoverage"
+        }
+      },
+      "required": [
+        "pathEnumeration",
+        "counterevidence"
+      ],
+      "type": "object"
+    },
+    "CounterevidenceCoverage": {
+      "additionalProperties": false,
+      "properties": {
+        "externalPolicies": {
+          "$ref": "#/definitions/CoverageStatus"
+        },
+        "middleware": {
+          "$ref": "#/definitions/CoverageStatus"
+        },
+        "migrations": {
+          "$ref": "#/definitions/CoverageStatus"
+        },
+        "prismaExtensions": {
+          "$ref": "#/definitions/CoverageStatus"
+        },
+        "wrappers": {
+          "$ref": "#/definitions/CoverageStatus"
+        }
+      },
+      "required": [
+        "middleware",
+        "wrappers",
+        "prismaExtensions",
+        "migrations",
+        "externalPolicies"
+      ],
+      "type": "object"
+    },
+    "CoverageStatus": {
+      "enum": [
+        "COMPLETE",
+        "PARTIAL",
+        "NOT_RUN"
+      ],
+      "type": "string"
+    },
+    "DefenseCandidate": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence": {
+          "items": {
+            "$ref": "#/definitions/EvidenceRef"
+          },
+          "type": "array"
+        },
+        "kind": {
+          "$ref": "#/definitions/DefenseKind"
+        },
+        "rationale": {
+          "type": "string"
+        },
+        "verdict": {
+          "$ref": "#/definitions/DefenseVerdict"
+        }
+      },
+      "required": [
+        "kind",
+        "verdict",
+        "evidence",
+        "rationale"
+      ],
+      "type": "object"
+    },
+    "DefenseKind": {
+      "enum": [
+        "PARAMETERIZATION",
+        "CONTEXT_SANITIZER",
+        "ALLOWLIST",
+        "BLOCKING_GUARD",
+        "EXTERNAL_POLICY"
+      ],
+      "type": "string"
+    },
+    "DefenseProof": {
+      "additionalProperties": false,
+      "properties": {
+        "defense": {
+          "$ref": "#/definitions/DefenseCandidate"
+        },
+        "pathId": {
+          "$ref": "#/definitions/PathId"
+        }
+      },
+      "required": [
+        "pathId",
+        "defense"
+      ],
+      "type": "object"
+    },
+    "DefenseVerdict": {
+      "enum": [
+        "BLOCKING",
+        "NON_BLOCKING",
+        "UNRESOLVED"
+      ],
+      "type": "string"
+    },
+    "EvidencePath": {
+      "additionalProperties": false,
+      "properties": {
+        "pathId": {
+          "$ref": "#/definitions/PathId"
+        },
+        "steps": {
+          "items": {
+            "$ref": "#/definitions/EvidenceRef"
+          },
+          "type": "array"
+        },
+        "unestablishedInvariants": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "pathId",
+        "steps",
+        "unestablishedInvariants"
+      ],
+      "type": "object"
+    },
+    "EvidenceRef": {
+      "additionalProperties": false,
+      "properties": {
+        "note": {
+          "type": "string"
+        },
+        "span": {
+          "$ref": "#/definitions/SourceSpan"
+        }
+      },
+      "required": [
+        "span",
+        "note"
+      ],
+      "type": "object"
+    },
+    "EvidenceResult": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/SupportedResult"
+        },
+        {
+          "$ref": "#/definitions/RefutedResult"
+        },
+        {
+          "$ref": "#/definitions/InconclusiveResult"
+        }
+      ]
+    },
+    "InconclusiveResult": {
+      "additionalProperties": false,
+      "properties": {
+        "candidatePaths": {
+          "items": {
+            "$ref": "#/definitions/EvidencePath"
+          },
+          "type": "array"
+        },
+        "coverage": {
+          "$ref": "#/definitions/AnalysisCoverage"
+        },
+        "unresolvedBoundaries": {
+          "items": {
+            "$ref": "#/definitions/UnresolvedBoundary"
+          },
+          "type": "array"
+        },
+        "verdict": {
+          "const": "INCONCLUSIVE",
+          "type": "string"
+        }
+      },
+      "required": [
+        "verdict",
+        "unresolvedBoundaries",
+        "coverage"
+      ],
+      "type": "object"
+    },
+    "PathCoverage": {
+      "additionalProperties": false,
+      "properties": {
+        "resolvedPaths": {
+          "type": "number"
+        },
+        "status": {
+          "$ref": "#/definitions/CoverageStatus"
+        },
+        "truncated": {
+          "type": "boolean"
+        },
+        "unresolvedCallEdges": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "status",
+        "resolvedPaths",
+        "unresolvedCallEdges",
+        "truncated"
+      ],
+      "type": "object"
+    },
+    "PathId": {
+      "type": "string"
+    },
+    "RefutedResult": {
+      "additionalProperties": false,
+      "properties": {
+        "blockingProofs": {
+          "items": {
+            "$ref": "#/definitions/DefenseProof"
+          },
+          "type": "array"
+        },
+        "coverage": {
+          "$ref": "#/definitions/AnalysisCoverage"
+        },
+        "verdict": {
+          "const": "REFUTED",
+          "type": "string"
+        }
+      },
+      "required": [
+        "verdict",
+        "blockingProofs",
+        "coverage"
+      ],
+      "type": "object"
+    },
+    "SecurityProveOutput": {
+      "additionalProperties": false,
+      "properties": {
+        "engine": {
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "const": "vibegate",
+              "type": "string"
+            },
+            "version": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "name",
+            "version"
+          ],
+          "type": "object"
+        },
+        "result": {
+          "$ref": "#/definitions/EvidenceResult"
+        }
+      },
+      "required": [
+        "result",
+        "engine"
+      ],
+      "type": "object"
+    },
+    "SourceSpan": {
+      "additionalProperties": false,
+      "properties": {
+        "end": {
+          "type": "number"
+        },
+        "file": {
+          "type": "string"
+        },
+        "start": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "file",
+        "start",
+        "end"
+      ],
+      "type": "object"
+    },
+    "SupportedResult": {
+      "additionalProperties": false,
+      "properties": {
+        "coverage": {
+          "$ref": "#/definitions/AnalysisCoverage"
+        },
+        "verdict": {
+          "const": "SUPPORTED",
+          "type": "string"
+        },
+        "witnessPath": {
+          "$ref": "#/definitions/EvidencePath"
+        }
+      },
+      "required": [
+        "verdict",
+        "witnessPath",
+        "coverage"
+      ],
+      "type": "object"
+    },
+    "UnresolvedBoundary": {
+      "additionalProperties": false,
+      "properties": {
+        "critical": {
+          "type": "boolean"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/definitions/EvidenceRef"
+          },
+          "type": "array"
+        },
+        "rationale": {
+          "type": "string"
+        },
+        "reason": {
+          "$ref": "#/definitions/UnresolvedReason"
+        },
+        "resource": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "reason",
+        "critical",
+        "evidence",
+        "rationale"
+      ],
+      "type": "object"
+    },
+    "UnresolvedReason": {
+      "enum": [
+        "EXTERNAL_POLICY_DECLARED",
+        "UNRESOLVED_PRISMA_CLIENT",
+        "UNRESOLVED_CALL_EDGE",
+        "UNRESOLVED_MIDDLEWARE_MATCHER",
+        "DYNAMIC_DISPATCH",
+        "REQUESTED_ENTRYPOINT_NOT_FOUND",
+        "AMBIGUOUS_GUARD_SOURCE"
+      ],
+      "type": "string"
+    }
+  }
+}

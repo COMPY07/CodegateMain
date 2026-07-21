@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "vibegate": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["packages/mcp-server/dist/server.js"],
+      "env": { "VIBEGATE_ROOT": "${workspaceFolder}" }
+    }
+  }
+}
