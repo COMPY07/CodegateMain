@@ -1,0 +1,50 @@
+# Claude
+.claude/
+
+# IDEs
+.idea/
+*.iml
+*.iws
+out/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+._*
+Thumbs.db
+
+# Node
+node_modules/
+dist/
+dist-ssr/
+build/
+.vite/
+*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+logs/
+
+# Coverage
+coverage/
