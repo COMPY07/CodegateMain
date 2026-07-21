@@ -57,7 +57,7 @@ test.beforeEach(async ({ page }) => {
 
 test('탭과 질문 도구 상태를 URL history와 동기화한다', async ({ page }) => {
   await expect(page.frameLocator('iframe[title="live-preview"]').locator('body')).toBeVisible()
-  await page.getByRole('button', { name: '대시보드 📌' }).click()
+  await page.getByRole('button', { name: '대시보드', exact: true }).click()
   await expect(page).toHaveURL(/#dash$/)
   await page.goBack()
   await expect(page).toHaveURL(/#live$/)
