@@ -1,21 +1,20 @@
-# Claude
+# ===== Claude / session =====
 .claude/
 
-# IDEs
-.idea/
-*.iml
-*.iws
-out/
-.vscode/
-*.swp
-*.swo
-
-# OS
+# ===== OS artifacts (T7 non-APFS volume sprays AppleDouble ._* files) =====
 .DS_Store
 ._*
 Thumbs.db
 
-# Node
+# ===== IDEs =====
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+out/
+
+# ===== Node (frontend) =====
 node_modules/
 dist/
 dist-ssr/
@@ -26,8 +25,10 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+test-results/
+coverage/
 
-# Python
+# ===== Python (backend) =====
 __pycache__/
 *.py[cod]
 *.egg-info/
@@ -37,14 +38,28 @@ venv/
 .mypy_cache/
 .ruff_cache/
 
-# Env / secrets
+# ===== redteam C++ build output =====
+redteam/build/
+redteam/build-*/
+redteam/cmake-build-*/
+.cache/
+*.local.json
+
+# ===== workspace (agent-edited demo project) =====
+workspace/node_modules/
+workspace/dist/
+
+# ===== Env / secrets =====
+backend/credentials.json
 .env
 .env.*
 !.env.example
 
-# Logs
+# ===== Logs =====
 *.log
 logs/
 
-# Coverage
-coverage/
+# codegate-agent 로컬 산출물 (설정 디렉터리 밖으로 새는 경우 대비)
+agent-token
+agent-cache.json
+agent-cache.tmp
