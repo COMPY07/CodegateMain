@@ -36,7 +36,7 @@ function subtreeHasMatch(node, q) {
   return false
 }
 
-function TreeNode({ node, path, q, openMap, toggleOpen, activePath, setActivePath }) {
+function TreeNode({ node, path, q, openMap, toggleOpen, activePath, onSelectFile }) {
   const isFolder = node.type === 'folder'
   const filtering = q.length > 0
   if (filtering && !subtreeHasMatch(node, q)) return null
@@ -49,7 +49,7 @@ function TreeNode({ node, path, q, openMap, toggleOpen, activePath, setActivePat
     <div className="tnode">
       <div
         className={'trow' + (!isFolder && activePath === path ? ' active' : '') + (isMatch ? ' match' : '')}
-        onClick={() => (isFolder ? toggleOpen(path) : setActivePath(path))}
+        onClick={() => (isFolder ? toggleOpen(path) : onSelectFile({ path, name: node.name, icon: node.icon }))}
         title={path}
       >
         <span className="tcaret">{isFolder ? (open ? '▾' : '▸') : ''}</span>
@@ -67,7 +67,7 @@ function TreeNode({ node, path, q, openMap, toggleOpen, activePath, setActivePat
               openMap={openMap}
               toggleOpen={toggleOpen}
               activePath={activePath}
-              setActivePath={setActivePath}
+              onSelectFile={onSelectFile}
             />
           ))}
         </div>
@@ -76,15 +76,23 @@ function TreeNode({ node, path, q, openMap, toggleOpen, activePath, setActivePat
   )
 }
 
-function FileTree() {
+function FileTree({ onOpenFile, tree }) {
+  // 실제 프로젝트 트리가 있으면 사용하고, 없으면 목업으로 폴백한다.
+  const nodes = tree && tree.length ? tree : fileTree
   const [query, setQuery] = useState('')
-  const [openMap, setOpenMap] = useState(() => initialOpenMap(fileTree))
-  const [activePath, setActivePath] = useState(() => findActivePath(fileTree))
+  const [openMap, setOpenMap] = useState(() => initialOpenMap(nodes))
+  const [activePath, setActivePath] = useState(() => findActivePath(nodes))
+
+  // 파일 클릭 → 트리 활성 상태 갱신 + 중앙 뷰포트에서 코드 열기
+  const selectFile = (file) => {
+    setActivePath(file.path)
+    onOpenFile?.(file)
+  }
 
   const q = query.trim().toLowerCase()
-  const folders = allFolderPaths(fileTree)
+  const folders = allFolderPaths(nodes)
   const allOpen = folders.length > 0 && folders.every(p => openMap[p])
-  const hasResult = q.length === 0 || fileTree.some(n => subtreeHasMatch(n, q))
+  const hasResult = q.length === 0 || nodes.some(n => subtreeHasMatch(n, q))
 
   const toggleOpen = (path) => setOpenMap(m => ({ ...m, [path]: !m[path] }))
   const toggleAll = () => {
@@ -117,7 +125,7 @@ function FileTree() {
       </div>
 
       <div className="tree">
-        {fileTree.map((n, i) => (
+        {nodes.map((n, i) => (
           <TreeNode
             key={n.name + i}
             node={n}
@@ -126,7 +134,7 @@ function FileTree() {
             openMap={openMap}
             toggleOpen={toggleOpen}
             activePath={activePath}
-            setActivePath={setActivePath}
+            onSelectFile={selectFile}
           />
         ))}
         {!hasResult && <div className="tree-empty">"{query}" 검색 결과 없음</div>}
@@ -135,7 +143,7 @@ function FileTree() {
   )
 }
 
-export default function LeftSidebar({ collapsed, onToggle }) {
+export default function LeftSidebar({ collapsed, onToggle, onOpenFile, tree, projectName, onBack }) {
   if (collapsed) {
     return (
       <aside className="rail">
@@ -157,16 +165,20 @@ export default function LeftSidebar({ collapsed, onToggle }) {
   return (
     <aside className="rail">
       <div className="rail-head">
-        <div className="brand-badge">V</div>
-        <div>
-          <div className="brand-name">Vibe Studio</div>
-          <div className="brand-sub">바이브 코더 스튜디오</div>
+        {onBack ? (
+          <button className="rail-back" title="프로젝트 선택으로" aria-label="프로젝트 선택으로 돌아가기" onClick={onBack}>‹</button>
+        ) : (
+          <div className="brand-badge">V</div>
+        )}
+        <div style={{ minWidth: 0 }}>
+          <div className="brand-name">{projectName || 'Vibe Studio'}</div>
+          <div className="brand-sub">{projectName ? '열린 프로젝트' : '바이브 코더 스튜디오'}</div>
         </div>
         <button className="collapse-btn" title="접기" onClick={onToggle}>«</button>
       </div>
 
       <div className="rail-scroll">
-        <FileTree />
+        <FileTree onOpenFile={onOpenFile} tree={tree} />
 
         <div className="rail-section-label">🧰 유틸리티</div>
         <div className="util-list">

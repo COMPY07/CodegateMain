@@ -5,9 +5,6 @@ const SETTINGS_KEY = 'vibe-studio.settings.v1'
 const DEFAULT_SETTINGS = {
   language: 'ko',
   startTab: 'live',
-  themeMode: 'light',
-  themeHue: 242,
-  themeSaturation: 82,
   workspacePath: '',
   reducedMotion: false,
   highContrast: false,
@@ -15,7 +12,6 @@ const DEFAULT_SETTINGS = {
 
 const SETTINGS_TABS = [
   { id: 'general', icon: '◉', label: '일반' },
-  { id: 'appearance', icon: '◐', label: '테마' },
   { id: 'models', icon: '✦', label: 'AI 모델' },
   { id: 'project', icon: '◇', label: '프로젝트' },
   { id: 'accessibility', icon: '◎', label: '접근성' },
@@ -25,22 +21,14 @@ const SETTINGS_TABS = [
 function loadSettings() {
   try {
     const stored = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {}
-    const { themeBrightness, ...settings } = stored
-    return {
-      ...DEFAULT_SETTINGS,
-      ...settings,
-      themeSaturation: settings.themeSaturation ?? themeBrightness ?? DEFAULT_SETTINGS.themeSaturation,
-    }
+    return { ...DEFAULT_SETTINGS, ...stored }
   }
   catch { return DEFAULT_SETTINGS }
 }
 
 function applyAccessibilitySettings(settings) {
-  document.documentElement.dataset.theme = settings.themeMode
   document.documentElement.classList.toggle('reduce-motion', settings.reducedMotion)
   document.documentElement.classList.toggle('high-contrast', settings.highContrast)
-  document.documentElement.style.setProperty('--theme-hue', String(settings.themeHue))
-  document.documentElement.style.setProperty('--theme-saturation', String(settings.themeSaturation))
 }
 
 function SettingRow({ title, description, children }) {
@@ -53,25 +41,6 @@ function SettingsContent({ tab, settings, update }) {
     <p className="settings-section-desc">Vibe Studio의 기본 실행 환경을 설정합니다.</p>
     <SettingRow title="표시 언어" description="인터페이스에 사용할 언어입니다."><select value={settings.language} onChange={event => update('language', event.target.value)}><option value="ko">한국어</option><option value="en">English</option></select></SettingRow>
     <SettingRow title="시작 화면" description="앱을 열었을 때 처음 표시할 탭입니다."><select value={settings.startTab} onChange={event => update('startTab', event.target.value)}><option value="live">라이브 웹</option><option value="cot">에이전트 진행</option><option value="dash">대시보드</option></select></SettingRow>
-  </>
-
-  if (tab === 'appearance') return <>
-    <div className="theme-section-head">
-      <div><div className="settings-section-title">테마</div><p className="settings-section-desc">앱 전체에 사용할 강조 색상을 조정합니다.</p></div>
-      <button className="theme-reset" onClick={() => { update('themeMode', DEFAULT_SETTINGS.themeMode); update('themeHue', DEFAULT_SETTINGS.themeHue); update('themeSaturation', DEFAULT_SETTINGS.themeSaturation) }}><span aria-hidden="true">↻</span> 초기화</button>
-    </div>
-    <div className="theme-editor">
-      <div className="theme-mode-label">모드</div>
-      <div className="theme-mode" role="group" aria-label="테마 모드">
-        <button className={settings.themeMode === 'dark' ? 'active' : ''} aria-pressed={settings.themeMode === 'dark'} onClick={() => update('themeMode', 'dark')}><span aria-hidden="true">◔</span> 어두운 테마</button>
-        <button className={settings.themeMode === 'light' ? 'active' : ''} aria-pressed={settings.themeMode === 'light'} onClick={() => update('themeMode', 'light')}><span aria-hidden="true">☼</span> 밝은 테마</button>
-      </div>
-      <div className="theme-control-label"><label htmlFor="theme-hue">색상</label><output htmlFor="theme-hue">{settings.themeHue}°</output></div>
-      <input id="theme-hue" className="theme-range hue" type="range" min="0" max="359" value={settings.themeHue} onChange={event => update('themeHue', Number(event.target.value))} />
-      <div className="theme-control-label"><label htmlFor="theme-saturation">채도</label><output htmlFor="theme-saturation">{settings.themeSaturation}%</output></div>
-      <input id="theme-saturation" className="theme-range saturation" type="range" min="0" max="100" value={settings.themeSaturation} onChange={event => update('themeSaturation', Number(event.target.value))} />
-      <div className="theme-preview" aria-label="현재 테마 미리보기"><span /><div><strong>강조 색상 미리보기</strong><small>버튼, 선택 항목, 포커스에 적용됩니다.</small></div><button tabIndex="-1">적용 예시</button></div>
-    </div>
   </>
 
   if (tab === 'models') return <>

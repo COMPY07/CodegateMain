@@ -22,4 +22,13 @@ describe('ModelPicker', () => {
     expect(screen.getByText('새 모델 연결')).toBeInTheDocument()
     expect(screen.getByText(/실제 키 등록·검증은 백엔드 연동/)).toBeInTheDocument()
   })
+
+  it('축소 상태에서는 모델 메뉴를 아이콘 열 밖에 표시한다', async () => {
+    const user = userEvent.setup()
+    const { container } = render(<ModelPicker collapsed />)
+
+    await user.click(container.querySelector('.model-mini'))
+
+    expect(container.querySelector('.model-menu')).toHaveClass('from-mini')
+  })
 })

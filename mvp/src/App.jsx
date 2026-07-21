@@ -2,8 +2,13 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import LeftSidebar from './components/LeftSidebar.jsx'
 import CenterViewport from './components/CenterViewport.jsx'
 import RightPanel from './components/RightPanel.jsx'
+import ProjectLauncher from './components/ProjectLauncher.jsx'
 import { NotificationProvider, useNotifications } from './components/Notifications.jsx'
 import { tabs, initialConversation } from './data/mockData.js'
+
+// 프로젝트 선택 화면(런처)을 켜고 끄는 스위치.
+// false 로 두면 런처 없이 기존 단일 프로젝트 에디터로 동작한다(폴백).
+const PROJECT_LAUNCHER = true
 
 const SESSION_STORAGE_KEY = 'vibe-studio.sessions.v1'
 const ACTIVE_SESSION_STORAGE_KEY = 'vibe-studio.active-session.v1'
@@ -60,14 +65,30 @@ const readNavigationHash = () => {
 const navigationKey = ({ tab, tool }) => `${tab}:${tool}`
 const navigationHash = (tab, tool) => `#${tab}${tab === 'live' && tool === 'question' ? ',q' : tab === 'live' && tool === 'region' ? ',region' : ''}`
 const isMobileViewport = () => typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches
+const CORE_TAB_IDS = ['cot', 'live', 'dash']
+const MANAGED_TAB_IDS = ['pdf', 'csv']
 
-export function AppContent() {
+export function AppContent({ project = null, onBack }) {
   const notify = useNotifications()
   const initialNavigation = useRef(readNavigationHash()).current
   const navigationStateRef = useRef(navigationKey(initialNavigation))
   const [activeTab, setActiveTab] = useState(initialNavigation.tab)
+  const [openTabIds, setOpenTabIds] = useState(() => MANAGED_TAB_IDS.includes(initialNavigation.tab)
+    ? [...CORE_TAB_IDS, initialNavigation.tab]
+    : CORE_TAB_IDS)
+  const [tabMenuOpen, setTabMenuOpen] = useState(false)
+  const tabMenuRef = useRef(null)
   const [railCollapsed, setRailCollapsed] = useState(isMobileViewport)
   const [rightCollapsed, setRightCollapsed] = useState(isMobileViewport)
+
+  // 파일 트리에서 선택한 파일을 중앙 뷰포트의 코드 뷰로 연다.
+  const [activeFile, setActiveFile] = useState(null)
+  const openFile = (file) => {
+    setActiveFile(file)
+    setActiveTab('code')
+    setActiveTool('none')
+    if (isMobileViewport()) setRailCollapsed(true)
+  }
 
   // 활성 도구: 'none' | 'question'(질문 모드) | 'region'(영역 선택)
   // 서로 배타적 — 하나를 켜면 나머지는 꺼진다
@@ -76,9 +97,23 @@ export function AppContent() {
   const regionMode = activeTool === 'region'
   const toggleTool = (tool) => setActiveTool(t => (t === tool ? 'none' : tool))
   const selectTab = (tab) => {
+    if (tabs.some(item => item.id === tab)) {
+      setOpenTabIds(current => current.includes(tab) ? current : [...current, tab])
+    }
     setActiveTab(tab)
     if (tab !== 'live') setActiveTool('none')
   }
+  const closeTab = (tabId) => {
+    if (CORE_TAB_IDS.includes(tabId)) return
+    const index = openTabIds.indexOf(tabId)
+    const remaining = openTabIds.filter(id => id !== tabId)
+    setOpenTabIds(remaining)
+    if (activeTab !== tabId) return
+    const nextTab = remaining[Math.min(index, remaining.length - 1)] || 'live'
+    setActiveTab(nextTab)
+    setActiveTool('none')
+  }
+  const toggleManagedTab = (tabId) => openTabIds.includes(tabId) ? closeTab(tabId) : selectTab(tabId)
 
   // 채팅 입력 상태
   const [chips, setChips] = useState([])        // [{id, kind:'element'|'region', label, selector, region?}]
@@ -151,14 +186,14 @@ export function AppContent() {
   const choosePreset = (p) => {
     setPreview({ preset: p.id, width: p.width })
     setDeviceOpen(false)
-    if (activeTab !== 'live') setActiveTab('live')
+    if (activeTab !== 'live') selectTab('live')
   }
   const applyCustomWidth = () => {
     const w = parseInt(customW, 10)
     if (!Number.isFinite(w) || w < 240) return   // 최소 240px
     setPreview({ preset: 'custom', width: w })
     setDeviceOpen(false)
-    if (activeTab !== 'live') setActiveTab('live')
+    if (activeTab !== 'live') selectTab('live')
   }
 
   const canSend = chips.length > 0 || text.trim().length > 0
@@ -273,11 +308,20 @@ export function AppContent() {
     return () => document.removeEventListener('mousedown', onDoc)
   }, [deviceOpen])
 
+  // 탭 추가 메뉴 바깥을 누르면 닫는다.
+  useEffect(() => {
+    if (!tabMenuOpen) return
+    const onDoc = (event) => { if (tabMenuRef.current && !tabMenuRef.current.contains(event.target)) setTabMenuOpen(false) }
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [tabMenuOpen])
+
   // 뒤로가기/앞으로가기 또는 직접 입력한 hash를 탭과 도구 상태로 복원한다.
   useEffect(() => {
     const restoreNavigation = () => {
       const next = readNavigationHash()
       navigationStateRef.current = navigationKey(next)
+      setOpenTabIds(current => current.includes(next.tab) ? current : [...current, next.tab])
       setActiveTab(next.tab)
       setActiveTool(next.tool)
     }
@@ -291,6 +335,14 @@ export function AppContent() {
 
   // 사용자 조작으로 상태가 바뀌면 history 항목을 추가한다.
   useEffect(() => {
+    if (!activeTab) {
+      const nextState = navigationKey({ tab: '', tool: 'none' })
+      if (navigationStateRef.current !== nextState) {
+        navigationStateRef.current = nextState
+        window.history.pushState(null, '', '#')
+      }
+      return
+    }
     const nextState = navigationKey({ tab: activeTab, tool: activeTool })
     if (navigationStateRef.current === nextState) return
     navigationStateRef.current = nextState
@@ -311,6 +363,10 @@ export function AppContent() {
   }, [])
 
   const cls = 'app' + (railCollapsed ? ' rail-collapsed' : '') + (rightCollapsed ? ' right-collapsed' : '')
+  const orderedOpenTabs = [
+    ...CORE_TAB_IDS,
+    ...openTabIds.filter(id => !CORE_TAB_IDS.includes(id)),
+  ]
 
   return (
     <div className={cls}>
@@ -321,7 +377,14 @@ export function AppContent() {
           onClick={() => { setRailCollapsed(true); setRightCollapsed(true) }}
         />
       )}
-      <LeftSidebar collapsed={railCollapsed} onToggle={() => setRailCollapsed(v => !v)} />
+      <LeftSidebar
+        collapsed={railCollapsed}
+        onToggle={() => setRailCollapsed(v => !v)}
+        onOpenFile={openFile}
+        tree={project?.fileTree}
+        projectName={project?.name}
+        onBack={onBack}
+      />
 
       <main className="center">
         {/* 상단 탭 */}
@@ -338,27 +401,94 @@ export function AppContent() {
               onClick={() => { setRightCollapsed(false); setRailCollapsed(true) }}
             >💬</button>
           </div>
-          {tabs.map(t => (
+          {orderedOpenTabs.map(tabId => tabs.find(tab => tab.id === tabId)).filter(Boolean).map(t => (
             <button
               key={t.id}
-              className={'tab' + (activeTab === t.id ? ' active' : '') + (t.pinned ? ' pinned' : '')}
+              className={'tab' + (activeTab === t.id ? ' active' : '') + (CORE_TAB_IDS.includes(t.id) ? ' core' : ' temporary')}
               onClick={() => selectTab(t.id)}
             >
               <span className="dot" style={{ background: t.dot }} />
               <span>{t.label}</span>
-              {t.pinned && <span className="pin" title="고정 탭">📌</span>}
+              {!CORE_TAB_IDS.includes(t.id) && (
+                <span
+                  className="tab-close"
+                  role="button"
+                  tabIndex="0"
+                  aria-label={`${t.label} 탭 닫기`}
+                  onClick={(event) => { event.stopPropagation(); closeTab(t.id) }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault()
+                      event.stopPropagation()
+                      closeTab(t.id)
+                    }
+                  }}
+                >×</span>
+              )}
             </button>
           ))}
+          {activeFile && (
+            <button
+              className={'tab code-tab' + (activeTab === 'code' ? ' active' : '')}
+              onClick={() => selectTab('code')}
+              title={activeFile.path}
+            >
+              <span className="dot" style={{ background: '#0ea5e9' }} />
+              <span>{activeFile.icon || '📄'} {activeFile.name}</span>
+              <span
+                className="code-tab-close"
+                role="button"
+                tabIndex="0"
+                aria-label={`${activeFile.name} 탭 닫기`}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  setActiveFile(null)
+                  if (activeTab === 'code') setActiveTab('live')
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    setActiveFile(null)
+                    if (activeTab === 'code') setActiveTab('live')
+                  }
+                }}
+              >✕</span>
+            </button>
+          )}
           <span className="tab-spacer" />
           {activeTab === 'live' && (
             <span className="tab-live"><span className="live-dot" /> 라이브</span>
           )}
+          <div className="tab-manager-wrap" ref={tabMenuRef}>
+            <button
+              className={'tab-manager-button' + (tabMenuOpen ? ' active' : '')}
+              aria-label="도구 탭 관리"
+              aria-expanded={tabMenuOpen}
+              onClick={() => setTabMenuOpen(open => !open)}
+            >•••</button>
+            {tabMenuOpen && (
+              <div className="tab-manager-menu">
+                <div className="tab-manager-title"><strong>도구 탭</strong><span>필요한 화면만 표시합니다.</span></div>
+                {MANAGED_TAB_IDS.map(tabId => tabs.find(tab => tab.id === tabId)).filter(Boolean).map(tab => (
+                  <label className="tab-manager-item" key={tab.id}>
+                    <input type="checkbox" checked={openTabIds.includes(tab.id)} onChange={() => toggleManagedTab(tab.id)} />
+                    <span className="tab-manager-check" aria-hidden="true">{openTabIds.includes(tab.id) ? '✓' : ''}</span>
+                    <span className="dot" style={{ background: tab.dot }} />
+                    <span>{tab.label}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+          <button className="top-new-agent" aria-label="새 에이전트 만들기" onClick={() => { addSession(); selectTab('cot') }}><span>+</span> 새 에이전트</button>
         </div>
 
         {/* 메인 뷰포트 */}
         <div className="viewport">
           <CenterViewport
             activeTab={activeTab}
+            project={project}
             questionMode={questionMode}
             regionMode={regionMode}
             onPick={handlePick}
@@ -366,6 +496,7 @@ export function AppContent() {
             previewWidth={preview.width}
             previewReloadKey={previewReloadKey}
             highlightGroups={highlightGroups}
+            activeFile={activeFile}
           />
         </div>
 
@@ -374,19 +505,19 @@ export function AppContent() {
           <button
             className={'tool' + (questionMode ? ' active' : '')}
             title="질문 모드 — 화면 요소를 클릭해 프롬프트에 넣기"
-            onClick={() => { toggleTool('question'); if (activeTab !== 'live') setActiveTab('live') }}
+            onClick={() => { toggleTool('question'); if (activeTab !== 'live') selectTab('live') }}
           >✋</button>
           <button
             className={'tool' + (regionMode ? ' active' : '')}
             title="서클 투 서치 — 원을 그려 감싼 요소를 프롬프트에 넣기"
-            onClick={() => { toggleTool('region'); if (activeTab !== 'live') setActiveTab('live') }}
+            onClick={() => { toggleTool('region'); if (activeTab !== 'live') selectTab('live') }}
           >◯</button>
           <div className="tool-sep" />
           <div className="device-wrap" ref={deviceRef}>
             <button
               className={'tool' + (preview.preset !== 'desktop' ? ' active' : '')}
               title="반응형 미리보기"
-              onClick={() => { setDeviceOpen(o => !o); if (activeTab !== 'live') setActiveTab('live') }}
+              onClick={() => { setDeviceOpen(o => !o); if (activeTab !== 'live') selectTab('live') }}
             >📱</button>
             {deviceOpen && (
               <div className="device-menu">
@@ -463,7 +594,6 @@ export function AppContent() {
                 <span className="session-name">{s.name}</span>
               </button>
             ))}
-            <button className="session-add" title="세션 추가" onClick={addSession}>+</button>
             <button className="session-action danger" title="현재 세션 삭제" aria-label="현재 세션 삭제" onClick={deleteSession}>×</button>
           </div>
         </div>
@@ -525,6 +655,16 @@ export function AppContent() {
   )
 }
 
+// 프로젝트 런처 ↔ 에디터를 전환하는 앱 셸.
+// 프로젝트를 아직 고르지 않았으면 런처를, 고른 뒤에는 에디터를 렌더한다.
+function AppShell() {
+  const [project, setProject] = useState(null)
+  if (PROJECT_LAUNCHER && !project) {
+    return <ProjectLauncher onOpen={setProject} />
+  }
+  return <AppContent project={project} onBack={() => setProject(null)} />
+}
+
 export default function App() {
-  return <NotificationProvider><AppContent /></NotificationProvider>
+  return <NotificationProvider><AppShell /></NotificationProvider>
 }

@@ -26,4 +26,30 @@
 .agent-empty.disconnected .agent-empty-icon { background: rgba(217,119,6,.1); color: var(--amber); }
 .agent-retry-note { display: flex; align-items: center; gap: 7px; margin-top: 5px; color: var(--amber); font-size: 10.5px; font-weight: 800; }
 .agent-retry-note i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: pulse 1.4s infinite; }
+.agent-model { position: relative; flex: none; }
+.agent-model-trigger { height: 29px; padding: 2px 7px 2px 3px; display: flex; align-items: center; gap: 6px; border: 1px solid var(--line2); border-radius: 8px; background: var(--panel); color: var(--muted); }
+.agent-model-trigger:hover, .agent-model-trigger.active { border-color: var(--pur-d); color: var(--ink); background: var(--accent-04); }
+.agent-model-trigger > span:not(.model-tile) { max-width: 84px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9.5px; font-weight: 700; }
+.agent-model-trigger i { color: var(--dim); font-size: 9px; font-style: normal; }
+.subcard .agent-model-trigger { width: 29px; padding: 2px; justify-content: center; }
+.subcard .agent-model-trigger > span:not(.model-tile), .subcard .agent-model-trigger i { display: none; }
+.agent-model-menu { position: absolute; top: calc(100% + 6px); right: 0; z-index: 75; width: 224px; padding: 7px; border: 1px solid var(--line2); border-radius: 12px; background: var(--panel); box-shadow: 0 14px 36px rgba(23,25,40,.18); }
+.agent-model-menu-title { padding: 5px 6px 8px; border-bottom: 1px solid var(--line); }
+.agent-model-menu-title strong, .agent-model-menu-title span { display: block; }
+.agent-model-menu-title strong { color: var(--ink); font-size: 11px; }
+.agent-model-menu-title span { margin-top: 2px; color: var(--dim); font-size: 9px; }
+.agent-model-menu > button { width: 100%; display: flex; align-items: center; gap: 9px; padding: 7px; border-radius: 8px; color: var(--muted); text-align: left; }
+.agent-model-menu > button:hover:not(:disabled) { background: var(--panel3); color: var(--ink); }
+.agent-model-menu > button.active { background: var(--accent-06); }
+.agent-model-menu > button:disabled { cursor: default; opacity: .72; }
+.agent-model-menu > button > span:not(.model-tile) { flex: 1; }
+.agent-model-menu strong, .agent-model-menu small { display: block; }
+.agent-model-menu strong { color: var(--ink); font-size: 10.5px; }
+.agent-model-menu small { margin-top: 1px; color: var(--dim); font-size: 8.5px; }
+.agent-model-menu em { padding: 3px 6px; border-radius: 10px; background: var(--accent-10); color: var(--pur-l); font-size: 8px; font-style: normal; font-weight: 800; }
+.model-handoff { display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 9px; margin: 8px 0 2px 24px; padding: 9px 10px; border: 1px solid var(--accent-20); border-radius: 9px; background: var(--accent-04); }
+.model-handoff-icons { display: flex; align-items: center; gap: 4px; color: var(--dim); font-size: 9px; }
+.model-handoff strong { display: block; color: var(--ink); font-size: 10px; }
+.model-handoff p { margin: 2px 0 0; color: var(--muted); font-size: 8.8px; line-height: 1.4; }
+.model-handoff-badge { padding: 3px 6px; border-radius: 10px; background: rgba(217,119,6,.11); color: var(--amber); white-space: nowrap; font-size: 8px; font-weight: 800; }
 @media (max-width: 900px) { .agent-progress-head { flex-direction: column; } .agent-scenarios { justify-content: flex-start; } .ma-subs { grid-template-columns: 1fr; } }

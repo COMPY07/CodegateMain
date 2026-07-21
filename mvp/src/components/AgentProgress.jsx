@@ -1,4 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { models } from '../data/mockData.js'
+import { ModelTile } from './ModelPicker.jsx'
 import '../agent-progress.css'
 
 const STATUS_META = {
@@ -62,13 +64,75 @@ function ScenarioPicker({ value, onChange }) {
   )
 }
 
-function StepTimeline({ steps }) {
+function AgentModelSwitcher({ agentName, modelId, onChange }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+  const activeModel = models.find(model => model.id === modelId) || models[0]
+  const availableModels = models.filter(model => model.registered)
+
+  useEffect(() => {
+    if (!open) return
+    const close = event => { if (ref.current && !ref.current.contains(event.target)) setOpen(false) }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [open])
+
+  return (
+    <div className="agent-model" ref={ref}>
+      <button
+        className={'agent-model-trigger' + (open ? ' active' : '')}
+        aria-label={`${agentName} 모델 변경 · 현재 ${activeModel.name}`}
+        aria-expanded={open}
+        title={`${activeModel.name} · 클릭하여 모델 변경`}
+        onClick={() => setOpen(value => !value)}
+      >
+        <ModelTile m={activeModel} size={23} />
+        <span>{activeModel.name}</span>
+        <i>⌄</i>
+      </button>
+      {open && (
+        <div className="agent-model-menu">
+          <div className="agent-model-menu-title"><strong>모델 변경</strong><span>다음 단계부터 적용됩니다.</span></div>
+          {availableModels.map(model => (
+            <button
+              key={model.id}
+              className={model.id === modelId ? 'active' : ''}
+              aria-label={`${model.name} 모델로 변경`}
+              disabled={model.id === modelId}
+              onClick={() => { onChange(model.id); setOpen(false) }}
+            >
+              <ModelTile m={model} size={25} />
+              <span><strong>{model.name}</strong><small>{model.vendor}</small></span>
+              {model.id === modelId && <em>현재</em>}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ModelHandoffEvent({ event }) {
+  const from = models.find(model => model.id === event.from)
+  const to = models.find(model => model.id === event.to)
+  if (!from || !to) return null
+  return (
+    <div className="model-handoff" role="status">
+      <div className="model-handoff-icons"><ModelTile m={from} size={20} /><span>→</span><ModelTile m={to} size={20} /></div>
+      <div><strong>{from.name} → {to.name}</strong><p>현재 단계 완료 후 컨텍스트 요약과 변경 파일을 인수인계합니다.</p></div>
+      <span className="model-handoff-badge">전환 예정</span>
+    </div>
+  )
+}
+
+function StepTimeline({ steps, modelHistory = [] }) {
   return (
     <div className="sc-steps">
       {steps.map((step, index) => <div className="cot-step" key={`${step.head}-${index}`}>
         <div className="cot-rail"><div className={`cot-node ${step.state}`} />{index < steps.length - 1 && <div className="cot-line" />}</div>
         <div className="cot-body"><div className="cot-head">{step.head}</div><div className="cot-thought">{step.thought}</div>{step.tool && <div className="cot-tool">⚙ {step.tool}</div>}</div>
       </div>)}
+      {modelHistory.map(event => <ModelHandoffEvent key={event.id} event={event} />)}
     </div>
   )
 }
@@ -78,16 +142,17 @@ function StatusBadge({ status, main = false }) {
   return <span className={`substatus ${meta.cls}`}>{status === 'running' && <span className="pulsedot" />}{meta.symbol && `${meta.symbol} `}{main && status === 'running' ? '조율 중' : meta.label}</span>
 }
 
-function SubAgentCard({ sub }) {
+function SubAgentCard({ sub, modelState, onModelChange }) {
   const [open, setOpen] = useState(sub.status === 'running' || sub.status === 'failed')
   const meta = STATUS_META[sub.status] || STATUS_META.queued
+  const changeModel = modelId => { setOpen(true); onModelChange(sub.id, modelId) }
   return (
     <article className={`subcard ${meta.cls}`}>
-      <div className="sc-head"><div className={`sc-av ${meta.cls}`}>{sub.name.charAt(0)}</div><div className="sc-name">{sub.name}<span>{sub.role}</span></div><StatusBadge status={sub.status} /></div>
+      <div className="sc-head"><div className={`sc-av ${meta.cls}`}>{sub.name.charAt(0)}</div><div className="sc-name">{sub.name}<span>{sub.role}</span></div><AgentModelSwitcher agentName={sub.name} modelId={modelState.modelId} onChange={changeModel} /><StatusBadge status={sub.status} /></div>
       <div className="sc-bar" aria-label={`진행률 ${sub.progress}%`}><i style={{ width: `${sub.progress}%` }} /></div>
       <div className="sc-current"><span className="sc-order">순서 {sub.order}</span>{sub.status === 'queued' ? <span>선행: {sub.dependsOn}</span> : <span>▸ {sub.current}</span>}{sub.files.length > 0 && <span className="sc-file">{sub.files.join(', ')}</span>}</div>
       <button className="sc-toggle" onClick={() => setOpen(value => !value)}>{open ? '▾' : '▸'} 작업 상세 {sub.steps.length}단계</button>
-      {open && <StepTimeline steps={sub.steps} />}
+      {open && <StepTimeline steps={sub.steps} modelHistory={modelState.history} />}
     </article>
   )
 }
@@ -103,11 +168,30 @@ function EmptyState({ disconnected }) {
   )
 }
 
+const initialModelState = run => Object.fromEntries([
+  ['main', { modelId: run.main.modelId || 'claude', history: [] }],
+  ...run.subs.map(sub => [sub.id, { modelId: sub.modelId || 'claude', history: [] }]),
+])
+
 export default function AgentProgress({ run }) {
   const [scenario, setScenario] = useState('running')
   const [mainOpen, setMainOpen] = useState(true)
+  const [agentModels, setAgentModels] = useState(() => initialModelState(run))
   const displayRun = useMemo(() => makeScenario(run, scenario), [run, scenario])
   const empty = scenario === 'empty' || scenario === 'disconnected'
+  const changeAgentModel = (agentId, nextModelId) => {
+    setAgentModels(current => {
+      const previous = current[agentId]
+      if (!previous || previous.modelId === nextModelId) return current
+      const event = {
+        id: `${agentId}-${previous.history.length + 1}`,
+        from: previous.modelId,
+        to: nextModelId,
+        effective: 'next-step',
+      }
+      return { ...current, [agentId]: { modelId: nextModelId, history: [...previous.history, event] } }
+    })
+  }
 
   if (empty) {
     return <div className="vp-frame dark"><div className="marun"><div className="agent-progress-head"><div><div className="cot-title">◐ 멀티 에이전트 작업 현황</div><div className="ma-sub">정적 상태 미리보기</div></div><ScenarioPicker value={scenario} onChange={setScenario} /></div><EmptyState disconnected={scenario === 'disconnected'} /></div></div>
@@ -121,11 +205,11 @@ export default function AgentProgress({ run }) {
         <div className="agent-progress-head"><div><div className="cot-title">◐ 멀티 에이전트 작업 현황</div><div className="ma-sub">실행 #{runId} · {title}</div></div><ScenarioPicker value={scenario} onChange={setScenario} /></div>
         <div className="ma-summary agent-summary">{Object.entries(STATUS_META).map(([status, meta]) => <span key={status} className={`ma-chip ${meta.cls}`}>{meta.label} {counts[status] || 0}</span>)}</div>
         <section className={`ma-main ${main.status || 'running'}`}>
-          <div className="sc-head"><div className="sc-av main">O</div><div className="sc-name">{main.name}<span>{main.role}</span></div><StatusBadge status={main.status || 'running'} main /><button className="sc-toggle inline" onClick={() => setMainOpen(value => !value)}>{mainOpen ? '접기 ▾' : '펼치기 ▸'}</button></div>
-          {mainOpen && <StepTimeline steps={main.steps} />}
+          <div className="sc-head"><div className="sc-av main">O</div><div className="sc-name">{main.name}<span>{main.role}</span></div><AgentModelSwitcher agentName={main.name} modelId={agentModels.main.modelId} onChange={modelId => changeAgentModel('main', modelId)} /><StatusBadge status={main.status || 'running'} main /><button className="sc-toggle inline" onClick={() => setMainOpen(value => !value)}>{mainOpen ? '접기 ▾' : '펼치기 ▸'}</button></div>
+          {mainOpen && <StepTimeline steps={main.steps} modelHistory={agentModels.main.history} />}
         </section>
         <div className="ma-subs-label">서브 에이전트 · 작업 상태 <span>{subs.length}개</span></div>
-        <div className="ma-subs">{subs.map(sub => <SubAgentCard key={`${scenario}-${sub.id}`} sub={sub} />)}</div>
+        <div className="ma-subs">{subs.map(sub => <SubAgentCard key={`${scenario}-${sub.id}`} sub={sub} modelState={agentModels[sub.id]} onModelChange={changeAgentModel} />)}</div>
       </div>
     </div>
   )

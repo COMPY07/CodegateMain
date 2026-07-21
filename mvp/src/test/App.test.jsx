@@ -1,7 +1,15 @@
 import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
-import App from '../App.jsx'
+import { AppContent } from '../App.jsx'
+import { NotificationProvider } from '../components/Notifications.jsx'
+
+// 앱 최상위(App)는 프로젝트 런처를 먼저 렌더한다. 아래 테스트들은
+// 에디터 내부 동작을 검증하므로 런처 게이트 없이 에디터 유닛을 직접 렌더한다.
+// (런처는 File System Access API 의존이라 별도 테스트로 다룬다.)
+const App = () => (
+  <NotificationProvider><AppContent /></NotificationProvider>
+)
 
 const postPick = (label, selector) => {
   act(() => {
@@ -52,7 +60,7 @@ describe('App 핵심 사용자 흐름', () => {
   it('세션을 추가하고 localStorage에 보존한다', async () => {
     const user = userEvent.setup()
     render(<App />)
-    await user.click(screen.getByTitle('세션 추가'))
+    await user.click(screen.getByRole('button', { name: '새 에이전트 만들기' }))
     const nameInput = screen.getByRole('textbox', { name: '세션 이름' })
     expect(nameInput).toHaveValue('New Agent 4')
     await user.type(nameInput, '{enter}')
@@ -61,6 +69,45 @@ describe('App 핵심 사용자 흐름', () => {
       const saved = JSON.parse(window.localStorage.getItem('vibe-studio.sessions.v1'))
       expect(saved).toHaveLength(4)
     })
+  })
+
+  it('탭 관리 메뉴에서 도구 탭을 열고 닫는다', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    expect(screen.queryByRole('button', { name: 'report.pdf 탭 닫기' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '도구 탭 관리' }))
+    const pdfToggle = screen.getByRole('checkbox', { name: 'report.pdf' })
+    expect(pdfToggle).not.toBeChecked()
+
+    await user.click(pdfToggle)
+    expect(pdfToggle).toBeChecked()
+    expect(screen.getByRole('button', { name: 'report.pdf 탭 닫기' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'report.pdf 탭 닫기' }))
+    await user.click(screen.getByRole('button', { name: '도구 탭 관리' }))
+    expect(screen.getByRole('checkbox', { name: 'report.pdf' })).not.toBeChecked()
+  })
+
+  it('핵심 화면은 항상 표시하고 닫기 기능을 제공하지 않는다', () => {
+    render(<App />)
+
+    expect(screen.queryByRole('button', { name: '에이전트 CoT 탭 닫기' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '라이브 웹 탭 닫기' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '대시보드 탭 닫기' })).not.toBeInTheDocument()
+    expect(screen.getByText('에이전트 CoT')).toBeInTheDocument()
+    expect(screen.getByText('라이브 웹')).toBeInTheDocument()
+    expect(screen.getByText('대시보드')).toBeInTheDocument()
+  })
+
+  it('상단 전용 버튼에서 새 에이전트를 만든다', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(screen.getByRole('button', { name: '새 에이전트 만들기' }))
+
+    expect(screen.getByRole('textbox', { name: '세션 이름' })).toHaveValue('New Agent 4')
+    expect(screen.getByText('◐ 멀티 에이전트 작업 현황')).toBeInTheDocument()
   })
 
   it('외부 hash 변경에서 탭과 도구 상태를 복원한다', async () => {

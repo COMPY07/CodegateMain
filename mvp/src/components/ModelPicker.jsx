@@ -49,7 +49,7 @@ function Glyph({ id }) {
   }
 }
 
-function ModelTile({ m, size = 30 }) {
+export function ModelTile({ m, size = 30 }) {
   return (
     <span
       className={'model-tile' + (m.bordered ? ' bordered' : '')}

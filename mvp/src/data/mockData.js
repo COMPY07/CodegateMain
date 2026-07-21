@@ -17,6 +17,166 @@ export const fileTree = [
   },
 ]
 
+// ===== 파일 트리 목업 코드 내용 =====
+// 실제 디스크가 아니라 데모용 정적 내용이다. 키는 트리에서 '/'로 이은 파일 경로.
+export const fileContents = {
+  'my-app/src/App.jsx': {
+    language: 'jsx',
+    code: `import { useState } from 'react'
+import AddressBar from './AddressBar'
+import LoginForm from './LoginForm'
+import './styles.css'
+
+export default function App() {
+  const [url, setUrl] = useState('')
+
+  return (
+    <div className="app">
+      <AddressBar value={url} onChange={setUrl} />
+      <main>
+        <LoginForm />
+      </main>
+    </div>
+  )
+}
+`,
+  },
+  'my-app/src/AddressBar.tsx': {
+    language: 'tsx',
+    code: `import { ChangeEvent } from 'react'
+
+interface AddressBarProps {
+  value: string
+  onChange: (next: string) => void
+}
+
+export default function AddressBar({ value, onChange }: AddressBarProps) {
+  const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
+    onChange(event.target.value)
+  }
+
+  return (
+    <header className="addr-bar">
+      <input
+        className="url"
+        placeholder="https://"
+        value={value}
+        onChange={handleChange}
+        aria-label="주소 입력"
+      />
+      <button className="go">이동</button>
+    </header>
+  )
+}
+`,
+  },
+  'my-app/src/LoginForm.tsx': {
+    language: 'tsx',
+    code: `import { FormEvent, useState } from 'react'
+
+export default function LoginForm() {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+
+  const handleSubmit = (event: FormEvent) => {
+    event.preventDefault()
+    // TODO: 폼 검증 및 로그인 요청 연결
+  }
+
+  return (
+    <form className="login" onSubmit={handleSubmit}>
+      <label>
+        이메일
+        <input type="email" value={email} onChange={e => setEmail(e.target.value)} />
+      </label>
+      <label>
+        비밀번호
+        <input type="password" value={password} onChange={e => setPassword(e.target.value)} />
+      </label>
+      <button type="submit">로그인</button>
+    </form>
+  )
+}
+`,
+  },
+  'my-app/src/styles.css': {
+    language: 'css',
+    code: `.app {
+  font-family: -apple-system, "Apple SD Gothic Neo", sans-serif;
+  color: #2a2340;
+}
+
+.addr-bar {
+  display: flex;
+  gap: 8px;
+  padding: 14px 28px;
+}
+
+.url {
+  width: 280px;
+  height: 34px;
+  border: 1px solid #d8d3e6;
+  border-radius: 9px;
+  padding: 0 12px;
+}
+
+.login {
+  display: grid;
+  gap: 12px;
+  max-width: 320px;
+}
+`,
+  },
+  'my-app/public/index.html': {
+    language: 'html',
+    code: `<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>My App</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
+`,
+  },
+  'my-app/package.json': {
+    language: 'json',
+    code: `{
+  "name": "my-app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  }
+}
+`,
+  },
+  'my-app/README.md': {
+    language: 'markdown',
+    code: `# My App
+
+Vibe Studio로 생성한 데모 프로젝트입니다.
+
+## 실행
+
+\`\`\`bash
+npm install
+npm run dev
+\`\`\`
+`,
+  },
+}
+
 // ===== 좌측 유틸리티 =====
 export const utilities = [
   { icon: '🛡', title: '로컬 코드 검수', desc: '함수 단위 · 온디바이스', badge: 'ON' },
@@ -52,6 +212,7 @@ export const agentRun = {
   main: {
     name: '오케스트레이터',
     role: 'Main Agent',
+    modelId: 'claude',
     status: 'running',
     steps: [
       { state: 'done', head: '요청 분석', thought: '로그인 페이지를 심플하게 만들고 폼 검증을 추가하라는 요청. 대상 파일과 범위를 특정.', tool: null },
@@ -62,7 +223,7 @@ export const agentRun = {
   },
   subs: [
     {
-      id: 'ui', name: 'UI 빌더', role: 'UI Builder', status: 'done', order: 1, progress: 100,
+      id: 'ui', name: 'UI 빌더', role: 'UI Builder', modelId: 'gpt', status: 'done', order: 1, progress: 100,
       elapsed: '41s', files: ['LoginForm.tsx'], current: 'LoginForm.tsx 생성 완료',
       steps: [
         { state: 'done', head: '컴포넌트 계획', thought: '이메일·비밀번호 입력 + 로그인 버튼 구조 확정.' },
@@ -71,7 +232,7 @@ export const agentRun = {
       ],
     },
     {
-      id: 'val', name: '폼 검증기', role: 'Validator', status: 'running', order: 2, progress: 62,
+      id: 'val', name: '폼 검증기', role: 'Validator', modelId: 'claude', status: 'running', order: 2, progress: 62,
       elapsed: '0:23', files: ['validation.ts'], current: '비밀번호 규칙 작성 중 (3/5 필드)',
       steps: [
         { state: 'done', head: '검증 규칙 설계', thought: '필수·형식·길이 규칙 정의.' },
@@ -81,7 +242,7 @@ export const agentRun = {
       ],
     },
     {
-      id: 'test', name: '테스트 작성', role: 'Test Writer', status: 'running', order: 2, progress: 38,
+      id: 'test', name: '테스트 작성', role: 'Test Writer', modelId: 'kimi', status: 'running', order: 2, progress: 38,
       elapsed: '0:18', files: ['login.test.ts'], current: '로그인 성공 케이스 작성 중',
       steps: [
         { state: 'done', head: '케이스 도출', thought: '성공·실패·엣지 케이스 목록화.' },
@@ -90,7 +251,7 @@ export const agentRun = {
       ],
     },
     {
-      id: 'review', name: '검수기', role: 'Reviewer', status: 'queued', order: 3, progress: 0,
+      id: 'review', name: '검수기', role: 'Reviewer', modelId: 'gpt', status: 'queued', order: 3, progress: 0,
       elapsed: '—', files: [], dependsOn: '폼 검증기 · 테스트 작성', current: '선행 작업 완료 대기 중',
       steps: [
         { state: 'pending', head: '변경 diff 검수', thought: '보안·누락·중복을 함수 단위로 점검 예정.' },

@@ -1,0 +1,55 @@
+/* ============ 코드 뷰어 (파일 트리 선택 → 읽기 전용 미리보기) ============ */
+.code-view { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; background: var(--panel); }
+.code-toolbar { flex: none; min-height: 48px; padding: 7px 10px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--line); background: var(--panel2); }
+.code-icon { font-size: 14px; }
+.code-filename { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); font-size: 12px; font-weight: 700; }
+.code-lang { padding: 2px 7px; border-radius: 10px; background: var(--accent-06); color: var(--pur-d); font-size: 9px; font-weight: 800; text-transform: uppercase; }
+.code-spacer { flex: 1; }
+.code-local-badge { padding: 3px 7px; border-radius: 10px; background: rgba(22,163,74,.09); color: var(--green); font-size: 9px; font-weight: 800; }
+
+.code-stage { position: relative; flex: 1; min-height: 0; display: flex; background: var(--panel); overflow: auto; }
+.code-empty { flex: 1; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px; color: var(--muted); padding: 24px; text-align: center; }
+.code-empty .big { font-size: 42px; opacity: .65; }
+.code-empty strong { color: var(--ink); font-size: 13px; }
+.code-empty span:last-child { color: var(--dim); font-size: 10.5px; font-weight: 500; }
+
+/* ---- 이미지 · PDF 미리보기 ---- */
+.code-media { flex: 1; min-height: 0; width: 100%; display: flex; align-items: center; justify-content: center;
+  padding: 24px; overflow: auto;
+  background: repeating-conic-gradient(var(--panel2) 0% 25%, var(--panel) 0% 50%) 50% / 20px 20px; }
+.code-image { max-width: 100%; max-height: 100%; object-fit: contain;
+  border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,.12); background: var(--panel); }
+.code-pdf { flex: 1; min-height: 0; width: 100%; border: none; background: var(--panel); }
+
+/* ---- 문법 강조 코드 ---- */
+.code-scroll { flex: 1; min-height: 0; display: flex; overflow: auto; font: 12px/1.65 "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace; }
+.code-gutter { flex: none; display: flex; flex-direction: column; padding: 12px 0; text-align: right; user-select: none; background: var(--panel2); border-right: 1px solid var(--line); color: var(--dim); }
+.code-lineno { display: block; padding: 0 12px; }
+.code-pre { margin: 0; padding: 12px 16px; flex: 1; min-width: 0; }
+.code-pre.hljs { background: transparent; color: var(--ink); }
+.code-pre code { font: inherit; white-space: pre; display: block; }
+
+/* ---- 마크다운 리딩 뷰 (옵시디언 느낌) ---- */
+.md-reading { flex: 1; min-height: 0; overflow: auto; padding: 32px 40px; max-width: 780px; margin: 0 auto; width: 100%;
+  color: var(--ink); font-size: 15px; line-height: 1.7;
+  font-family: -apple-system, "Apple SD Gothic Neo", "Segoe UI", sans-serif; }
+.md-reading h1, .md-reading h2, .md-reading h3, .md-reading h4 { color: var(--ink); font-weight: 700; line-height: 1.3; margin: 1.4em 0 .6em; }
+.md-reading h1 { font-size: 1.9em; padding-bottom: .3em; border-bottom: 1px solid var(--line2); }
+.md-reading h2 { font-size: 1.5em; padding-bottom: .25em; border-bottom: 1px solid var(--line); }
+.md-reading h3 { font-size: 1.25em; }
+.md-reading h4 { font-size: 1.05em; }
+.md-reading > :first-child { margin-top: 0; }
+.md-reading p { margin: .8em 0; }
+.md-reading a { color: var(--pur-d); text-decoration: none; }
+.md-reading a:hover { text-decoration: underline; }
+.md-reading ul, .md-reading ol { margin: .7em 0; padding-left: 1.6em; }
+.md-reading li { margin: .3em 0; }
+.md-reading blockquote { margin: .9em 0; padding: .2em 1em; border-left: 3px solid var(--pur-l); background: var(--accent-03); color: var(--muted); border-radius: 0 6px 6px 0; }
+.md-reading code { font-family: "SFMono-Regular", Consolas, Menlo, monospace; font-size: .88em; background: var(--accent-06); color: var(--pur-d); padding: .12em .4em; border-radius: 5px; }
+.md-reading pre { background: var(--panel2); border: 1px solid var(--line2); border-radius: 10px; padding: 14px 16px; overflow: auto; margin: 1em 0; }
+.md-reading pre code { background: transparent; color: var(--ink); padding: 0; font-size: 12.5px; line-height: 1.6; }
+.md-reading hr { border: none; border-top: 1px solid var(--line2); margin: 1.6em 0; }
+.md-reading table { border-collapse: collapse; margin: 1em 0; width: 100%; font-size: .92em; }
+.md-reading th, .md-reading td { border: 1px solid var(--line2); padding: 7px 11px; text-align: left; }
+.md-reading th { background: var(--panel2); font-weight: 700; }
+.md-reading img { max-width: 100%; border-radius: 8px; }

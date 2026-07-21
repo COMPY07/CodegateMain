@@ -3,6 +3,7 @@ import { agentRun, samplePageHTML } from '../data/mockData.js'
 import CsvViewer from './CsvViewer.jsx'
 import Dashboard from './Dashboard.jsx'
 import AgentProgress from './AgentProgress.jsx'
+import CodeViewer from './CodeViewer.jsx'
 
 function LiveWeb({ questionMode, regionMode, onPick, onRegionPick, previewWidth, highlightGroups = [] }) {
   const iframeRef = useRef(null)
@@ -190,13 +191,23 @@ function PdfView() {
   )
 }
 
-export default function CenterViewport({ activeTab, questionMode, regionMode, onPick, onRegionPick, previewWidth, previewReloadKey, highlightGroups }) {
+export default function CenterViewport({ activeTab, project, questionMode, regionMode, onPick, onRegionPick, previewWidth, previewReloadKey, highlightGroups, activeFile }) {
+  if (!activeTab) {
+    return (
+      <div className="vp-frame dark tab-empty-view">
+        <span className="tab-empty-icon">＋</span>
+        <strong>열린 탭이 없습니다</strong>
+        <p>상단의 + 버튼에서 탭을 열거나 새 에이전트를 시작하세요.</p>
+      </div>
+    )
+  }
   switch (activeTab) {
     case 'live': return <LiveWeb key={previewReloadKey} questionMode={questionMode} regionMode={regionMode} onPick={onPick} onRegionPick={onRegionPick} previewWidth={previewWidth} highlightGroups={highlightGroups} />
     case 'cot':  return <AgentProgress run={agentRun} />
     case 'dash': return <Dashboard />
     case 'csv':  return <CsvViewer />
     case 'pdf':  return <PdfView />
+    case 'code': return <CodeViewer file={activeFile} project={project} />
     default:     return <LiveWeb key={previewReloadKey} questionMode={questionMode} regionMode={regionMode} onPick={onPick} onRegionPick={onRegionPick} previewWidth={previewWidth} highlightGroups={highlightGroups} />
   }
 }

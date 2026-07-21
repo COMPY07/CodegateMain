@@ -4,36 +4,73 @@ export const dashboardPeriods = [
   { id: '90d', label: '90일' },
 ]
 
-const stat = (runs, saving, security, period) => [
-  { id: 'runs', value: String(runs), label: '실행한 작업', tone: 'purple', help: `최근 ${period} 동안 시작한 에이전트 작업 수` },
-  { id: 'tokens', value: `${saving}%`, label: '토큰 절감(로컬 검수)', tone: 'green', help: '로컬 검수로 외부 모델 전송을 줄인 비율' },
-  { id: 'security', value: String(security), label: '예방한 보안 이슈', tone: 'amber', help: '실행 전에 탐지해 차단한 보안 문제 수' },
-]
+export const dashboardGoal = {
+  id: 'goal-demo',
+  title: 'Vibe Studio 데모 완성',
+  description: '질문 모드부터 AI 검수까지 핵심 사용자 흐름을 연결합니다.',
+  dueLabel: 'D-3',
+  steps: [
+    { id: 'goal-preview', label: '라이브 프리뷰와 질문 모드 연결', completed: true },
+    { id: 'goal-agent', label: '에이전트 진행 상태 시각화', completed: true },
+    { id: 'goal-dashboard', label: 'Goal·AI 사용 대시보드 구성', completed: false },
+    { id: 'goal-review', label: '로컬 함수 검수 결과 연결', completed: false },
+  ],
+}
+
+const aiUsage = ({ requests, totalTokens, inputTokens, outputTokens, cost, localShare, models }) => ({
+  requests,
+  totalTokens,
+  inputTokens,
+  outputTokens,
+  estimatedCost: cost,
+  localShare,
+  models,
+})
 
 export const dashboardMockData = {
   '7d': {
-    stats: stat(34, 76, 3, '7일'),
-    activity: [
-      { x: '월', value: 42, detail: '월요일 · 작업 42건' }, { x: '화', value: 68, detail: '화요일 · 작업 68건' },
-      { x: '수', value: 55, detail: '수요일 · 작업 55건' }, { x: '목', value: 81, detail: '목요일 · 작업 81건' },
-      { x: '금', value: 73, detail: '금요일 · 작업 73건' }, { x: '토', value: 38, detail: '토요일 · 작업 38건' },
-      { x: '일', value: 60, detail: '일요일 · 작업 60건' },
-    ],
+    ai: aiUsage({
+      requests: 34,
+      totalTokens: 48600,
+      inputTokens: 36200,
+      outputTokens: 12400,
+      cost: 1.84,
+      localShare: 72,
+      models: [
+        { id: 'claude', name: 'Claude Sonnet', requests: 17, tokens: 27100, share: 56, tone: 'purple' },
+        { id: 'gpt', name: 'GPT', requests: 9, tokens: 13900, share: 29, tone: 'blue' },
+        { id: 'local', name: 'Local LLM', requests: 8, tokens: 7600, share: 15, tone: 'green' },
+      ],
+    }),
   },
   '30d': {
-    stats: stat(142, 80, 7, '30일'),
-    activity: [
-      { x: '1주', value: 186, detail: '1주차 · 작업 186건' }, { x: '2주', value: 244, detail: '2주차 · 작업 244건' },
-      { x: '3주', value: 219, detail: '3주차 · 작업 219건' }, { x: '4주', value: 271, detail: '4주차 · 작업 271건' },
-      { x: '이번 주', value: 128, detail: '이번 주 · 작업 128건' },
-    ],
+    ai: aiUsage({
+      requests: 142,
+      totalTokens: 218400,
+      inputTokens: 164800,
+      outputTokens: 53600,
+      cost: 7.92,
+      localShare: 80,
+      models: [
+        { id: 'claude', name: 'Claude Sonnet', requests: 76, tokens: 126700, share: 58, tone: 'purple' },
+        { id: 'gpt', name: 'GPT', requests: 38, tokens: 56800, share: 26, tone: 'blue' },
+        { id: 'local', name: 'Local LLM', requests: 28, tokens: 34900, share: 16, tone: 'green' },
+      ],
+    }),
   },
   '90d': {
-    stats: stat(418, 83, 21, '90일'),
-    activity: [
-      { x: '5월 전반', value: 422, detail: '5월 전반 · 작업 422건' }, { x: '5월 후반', value: 501, detail: '5월 후반 · 작업 501건' },
-      { x: '6월 전반', value: 468, detail: '6월 전반 · 작업 468건' }, { x: '6월 후반', value: 557, detail: '6월 후반 · 작업 557건' },
-      { x: '7월 전반', value: 530, detail: '7월 전반 · 작업 530건' }, { x: '7월 후반', value: 291, detail: '7월 후반 · 작업 291건' },
-    ],
+    ai: aiUsage({
+      requests: 418,
+      totalTokens: 672900,
+      inputTokens: 511300,
+      outputTokens: 161600,
+      cost: 23.48,
+      localShare: 83,
+      models: [
+        { id: 'claude', name: 'Claude Sonnet', requests: 217, tokens: 383600, share: 57, tone: 'purple' },
+        { id: 'gpt', name: 'GPT', requests: 109, tokens: 181700, share: 27, tone: 'blue' },
+        { id: 'local', name: 'Local LLM', requests: 92, tokens: 107600, share: 16, tone: 'green' },
+      ],
+    }),
   },
 }
