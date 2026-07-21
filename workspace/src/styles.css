@@ -1,0 +1,51 @@
+* { box-sizing: border-box; margin: 0; }
+
+body {
+  font-family: -apple-system, "Apple SD Gothic Neo", sans-serif;
+  background: linear-gradient(180deg, #faf9ff, #f2effb);
+  color: #2a2340;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 14px 28px;
+  background: #fff;
+  border-bottom: 1px solid #eee;
+}
+
+.logo { font-weight: 800; color: #7c3aed; font-size: 18px; }
+nav { display: flex; gap: 20px; font-size: 14px; color: #5b5375; }
+nav a { text-decoration: none; color: inherit; }
+
+main { padding: 44px 48px; }
+h1 { font-size: 30px; margin-bottom: 8px; color: #1a1530; }
+.sub { color: #6b6485; margin-bottom: 26px; }
+
+.hero {
+  height: 150px;
+  border-radius: 14px;
+  background: linear-gradient(120deg, #ede9fe, #ddd6fe);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #7c3aed;
+  font-weight: 800;
+  margin-bottom: 26px;
+}
+
+.row { display: flex; gap: 12px; }
+
+.btn-primary,
+.btn-secondary {
+  padding: 11px 22px;
+  border-radius: 9px;
+  font-weight: 700;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.btn-primary { background: #7c3aed; color: #fff; }
+.btn-secondary { background: #ece8f8; color: #5b4b8a; }
