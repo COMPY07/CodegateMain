@@ -34,5 +34,3 @@ def get_security_service() -> SecurityService:
 
 def get_app_settings() -> Settings:
     return get_settings()
-
-
