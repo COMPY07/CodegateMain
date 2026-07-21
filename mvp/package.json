@@ -1,0 +1,23 @@
+{
+  "name": "vibe-studio-mvp",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Vibe Studio — 바이브 코더용 개발 스튜디오 MVP (질문모드 · 멀티에이전트 · 로컬검수)",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^5.4.11"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
+  }
+}
