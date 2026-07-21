@@ -1,0 +1,12 @@
+# Claude
+.claude/
+
+# JetBrains IDEs
+.idea/
+*.iml
+*.iws
+out/
+
+# macOS
+.DS_Store
+._*
