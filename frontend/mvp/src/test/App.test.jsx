@@ -87,7 +87,7 @@ describe('App 핵심 사용자 흐름', () => {
   it('세션을 추가하고 localStorage에 보존한다', async () => {
     const user = userEvent.setup()
     render(<App />)
-    await user.click(screen.getByTitle('세션 추가'))
+    await user.click(screen.getByRole('button', { name: '새 에이전트 만들기' }))
     const nameInput = screen.getByRole('textbox', { name: '세션 이름' })
     expect(nameInput).toHaveValue('New Agent 2')
     await user.type(nameInput, '{enter}')
@@ -111,12 +111,25 @@ describe('App 핵심 사용자 흐름', () => {
   it('세션 삭제를 공통 확인 dialog로 승인하고 결과 toast를 표시한다', async () => {
     const user = userEvent.setup()
     render(<App />)
-    await user.click(screen.getByTitle('세션 추가'))
+    await user.click(screen.getByRole('button', { name: '새 에이전트 만들기' }))
     await user.type(screen.getByRole('textbox', { name: '세션 이름' }), '{enter}')
     await user.click(screen.getByRole('button', { name: '현재 세션 삭제' }))
     expect(screen.getByRole('dialog', { name: '세션 삭제' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '삭제' }))
     expect(await screen.findByText(/세션을 삭제했습니다/)).toBeInTheDocument()
     expect(screen.queryByTitle('New Agent 2 · 더블클릭 또는 F2로 이름 변경')).not.toBeInTheDocument()
+  })
+
+  it('도구 탭을 필요할 때 열고 닫는다', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+
+    expect(screen.queryByRole('button', { name: 'report.pdf 탭 닫기' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '도구 탭 관리' }))
+    const pdf = screen.getByRole('checkbox', { name: 'report.pdf' })
+    await user.click(pdf)
+    expect(screen.getByRole('button', { name: 'report.pdf 탭 닫기' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'report.pdf 탭 닫기' }))
+    expect(screen.queryByRole('button', { name: 'report.pdf 탭 닫기' })).not.toBeInTheDocument()
   })
 })

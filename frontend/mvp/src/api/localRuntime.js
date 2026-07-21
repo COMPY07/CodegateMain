@@ -35,6 +35,8 @@ export const openProjectFolder = () =>
   request('/local/projects/open', { method: 'POST', body: {} })
 export const getProjectTree = (project, { signal } = {}) =>
   request(`/local/fs/tree?project=${encodeURIComponent(project || '')}`, { signal })
+export const readProjectFile = (project, path, { signal } = {}) =>
+  request(`/local/fs/file?project=${encodeURIComponent(project || '')}&path=${encodeURIComponent(path || '')}`, { signal })
 export const getPreview = ({ signal } = {}) =>
   request('/local/preview/status', { signal })
 export const startProjectPreview = (project) =>

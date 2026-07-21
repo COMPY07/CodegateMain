@@ -173,6 +173,17 @@ class Handler(BaseHTTPRequestHandler):
                 return
             self._send(200, filetree.build(target), origin)
             return
+        if path == "/local/fs/file":
+            query = urlparse(self.path).query
+            try:
+                target = self._project_dir(query)
+                requested_path = (parse_qs(query).get("path") or [""])[0]
+                result = filetree.read(target, requested_path)
+            except (ProjectError, ValueError, OSError) as e:
+                self._send(400, {"error": "bad_file", "message": str(e)}, origin)
+                return
+            self._send(200, result, origin)
+            return
         if path == "/local/preview/status":
             self._send(200, self.preview.status(), origin)
             return

@@ -208,6 +208,32 @@ def test_tree_of_a_missing_project_is_empty(tmp_path):
     assert filetree.build(tmp_path / "nope") == []
 
 
+def test_project_file_read_supports_tree_paths(store):
+    store.create("demo")
+    result = filetree.read(store.resolve("demo"), "demo/src/App.jsx")
+
+    assert result["type"] == "text"
+    assert result["language"] == "jsx"
+    assert "function App" in result["code"]
+
+
+@pytest.mark.parametrize("path", ["../secret.txt", "demo/../../secret.txt", "/etc/passwd", ""])
+def test_project_file_read_refuses_path_escape(store, path):
+    store.create("demo")
+    with pytest.raises(ValueError):
+        filetree.read(store.resolve("demo"), path)
+
+
+def test_project_file_read_does_not_follow_symlink_out(store, tmp_path):
+    store.create("demo")
+    secret = tmp_path / "secret.txt"
+    secret.write_text("do not expose")
+    (store.resolve("demo") / "linked.txt").symlink_to(secret)
+
+    with pytest.raises(ValueError):
+        filetree.read(store.resolve("demo"), "demo/linked.txt")
+
+
 # ---- preview -----------------------------------------------------------------
 
 

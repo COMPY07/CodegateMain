@@ -37,7 +37,7 @@ function subtreeHasMatch(node, q) {
   return false
 }
 
-function TreeNode({ node, path, q, openMap, toggleOpen, activePath, setActivePath }) {
+function TreeNode({ node, path, q, openMap, toggleOpen, activePath, onSelectFile }) {
   const isFolder = node.type === 'folder'
   const filtering = q.length > 0
   if (filtering && !subtreeHasMatch(node, q)) return null
@@ -50,7 +50,7 @@ function TreeNode({ node, path, q, openMap, toggleOpen, activePath, setActivePat
     <div className="tnode">
       <div
         className={'trow' + (!isFolder && activePath === path ? ' active' : '') + (isMatch ? ' match' : '')}
-        onClick={() => (isFolder ? toggleOpen(path) : setActivePath(path))}
+        onClick={() => (isFolder ? toggleOpen(path) : onSelectFile({ path, name: node.name, icon: node.icon }))}
         title={path}
       >
         <span className="tcaret">{isFolder ? (open ? '▾' : '▸') : ''}</span>
@@ -68,7 +68,7 @@ function TreeNode({ node, path, q, openMap, toggleOpen, activePath, setActivePat
               openMap={openMap}
               toggleOpen={toggleOpen}
               activePath={activePath}
-              setActivePath={setActivePath}
+              onSelectFile={onSelectFile}
             />
           ))}
         </div>
@@ -95,9 +95,9 @@ function FileTree({ onOpenFile, project }) {
   const allOpen = folders.length > 0 && folders.every(p => openMap[p])
   const hasResult = q.length === 0 || fileTree.some(n => subtreeHasMatch(n, q))
 
-  const selectFile = (path) => {
-    setActivePath(path)
-    onOpenFile?.(path)
+  const selectFile = (file) => {
+    setActivePath(file.path)
+    onOpenFile?.(file)
   }
 
   const toggleOpen = (path) => setOpenMap(m => ({ ...m, [path]: !m[path] }))
@@ -156,7 +156,7 @@ function FileTree({ onOpenFile, project }) {
             openMap={openMap}
             toggleOpen={toggleOpen}
             activePath={activePath}
-            setActivePath={selectFile}
+            onSelectFile={selectFile}
           />
         ))}
         {!hasResult && <div className="tree-empty">"{query}" 검색 결과 없음</div>}
@@ -165,7 +165,7 @@ function FileTree({ onOpenFile, project }) {
   )
 }
 
-export default function LeftSidebar({ collapsed, onToggle, projects }) {
+export default function LeftSidebar({ collapsed, onToggle, projects, onOpenFile }) {
   if (collapsed) {
     return (
       <aside className="rail">
@@ -194,7 +194,7 @@ export default function LeftSidebar({ collapsed, onToggle, projects }) {
 
       <div className="rail-scroll">
         <ProjectPicker {...projects} />
-        <FileTree project={projects?.active} />
+        <FileTree project={projects?.active} onOpenFile={onOpenFile} />
       </div>
 
       {/* 하단: 실제 Claude Code / Codex 선택 */}

@@ -257,6 +257,41 @@ button.util:disabled { opacity: .6; cursor: default; }
 }
 .tab .dot { width: 7px; height: 7px; border-radius: 50%; }
 .tab.pinned .pin { font-size: 9px; color: var(--pur-l); }
+.tab-close, .tab .code-tab-close {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px; margin-left: 2px; border-radius: 50%;
+  font-size: 12px; line-height: 1; color: var(--dim); opacity: 0;
+}
+.tab.temporary:hover .tab-close, .tab.temporary:focus-within .tab-close,
+.code-tab:hover .code-tab-close, .code-tab:focus-within .code-tab-close { opacity: 1; }
+.tab-close:hover, .tab .code-tab-close:hover { background: var(--line2); color: var(--ink); }
+.tab.core { padding-inline: 14px; }
+.tab-manager-wrap { position: relative; flex: none; display: flex; align-items: center; }
+.tab-manager-button {
+  min-width: 32px; height: 30px; padding: 0 8px; display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--line2); border-radius: 8px; background: var(--panel); color: var(--muted);
+  font-size: 11px; font-weight: 800; letter-spacing: 1px;
+}
+.tab-manager-button:hover, .tab-manager-button.active { border-color: var(--pur-d); background: var(--accent-06); color: var(--pur-l); }
+.tab-manager-menu {
+  position: absolute; top: calc(100% + 7px); right: 0; z-index: 80; width: 226px; padding: 8px;
+  border: 1px solid var(--line2); border-radius: 12px; background: var(--panel);
+  box-shadow: 0 14px 38px rgba(23,25,40,.18);
+}
+.tab-manager-title { padding: 5px 6px 8px; border-bottom: 1px solid var(--line); }
+.tab-manager-title strong, .tab-manager-title span { display: block; }
+.tab-manager-title strong { color: var(--ink); font-size: 11px; }
+.tab-manager-title span { margin-top: 2px; color: var(--dim); font-size: 9px; }
+.tab-manager-item { position: relative; display: flex; align-items: center; gap: 8px; padding: 8px 7px; border-radius: 8px; color: var(--muted); font-size: 11px; cursor: pointer; }
+.tab-manager-item:hover { background: var(--panel3); color: var(--ink); }
+.tab-manager-item input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.tab-manager-item:focus-within { box-shadow: inset 0 0 0 1px var(--pur-d); }
+.tab-manager-check { width: 16px; height: 16px; flex: none; display: flex; align-items: center; justify-content: center; border: 1px solid var(--line3); border-radius: 5px; color: #fff; font-size: 9px; }
+.tab-manager-item input:checked + .tab-manager-check { border-color: var(--pur-d); background: var(--pur-d); }
+.tab-manager-item .dot { flex: none; width: 7px; height: 7px; border-radius: 50%; }
+.top-new-agent { height: 30px; padding: 0 11px; display: flex; align-items: center; gap: 5px; border-radius: 8px; background: linear-gradient(145deg, var(--pur-d), var(--pur)); color: #fff; white-space: nowrap; font-size: 10.5px; font-weight: 800; }
+.top-new-agent:hover { filter: brightness(1.06); }
+.top-new-agent span { font-size: 15px; font-weight: 500; line-height: 1; }
 .tab-spacer { flex: 1; }
 .tab-live { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--dim); padding-right: 6px; }
 .live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); animation: pulse 1.6s infinite; }
@@ -674,6 +709,7 @@ button.util:disabled { opacity: .6; cursor: default; }
   .mobile-panel-button:hover { color: var(--ink); border-color: var(--line3); }
 
   .tabbar { overflow-x: auto; overflow-y: hidden; padding-left: 8px; scrollbar-width: thin; }
+  .tab-manager-menu { position: fixed; top: 48px; right: 10px; }
   .tab, .tab-live { flex: none; }
   .tab-spacer { flex: none; width: 2px; }
   .viewport { padding: 8px; }

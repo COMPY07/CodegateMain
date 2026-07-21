@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import CsvViewer from './CsvViewer.jsx'
 import Dashboard from './Dashboard.jsx'
 import AgentProgress from './AgentProgress.jsx'
+import CodeViewer from './CodeViewer.jsx'
 
 // 프리뷰가 보낸 요소 정보를 신뢰하기 전에 형태를 검증한다.
 const isFiniteNumber = (v) => typeof v === 'number' && Number.isFinite(v)
@@ -269,7 +270,7 @@ function PdfView() {
   )
 }
 
-export default function CenterViewport({ activeTab, questionMode, regionMode, onPick, onRegionPick, previewWidth, previewReloadKey, highlightGroups, agentRun, agentConnection, preview, project, projectsStatus, onStartPreview, onStopPreview }) {
+export default function CenterViewport({ activeTab, questionMode, regionMode, onPick, onRegionPick, previewWidth, previewReloadKey, highlightGroups, agentRun, agentConnection, preview, project, projectId, projectsStatus, onStartPreview, onStopPreview, activeFile }) {
   const liveProps = { questionMode, regionMode, onPick, onRegionPick, previewWidth, highlightGroups, preview, project, projectsStatus, onStartPreview, onStopPreview }
   switch (activeTab) {
     case 'live': return <LiveWeb key={previewReloadKey} {...liveProps} />
@@ -277,6 +278,7 @@ export default function CenterViewport({ activeTab, questionMode, regionMode, on
     case 'dash': return <Dashboard />
     case 'csv':  return <CsvViewer />
     case 'pdf':  return <PdfView />
+    case 'code': return <CodeViewer file={activeFile} project={projectId} />
     default:     return <LiveWeb key={previewReloadKey} {...liveProps} />
   }
 }
