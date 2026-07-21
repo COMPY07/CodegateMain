@@ -60,11 +60,71 @@ function ModelTile({ m, size = 30 }) {
   )
 }
 
+const MODEL_STORAGE_KEY = 'vibe:model'
+
+// 새 모델 연결 안내 모달 (목업 — 실제 저장은 백엔드 BE-009 이후)
+function ConnectModal({ initialId, onClose }) {
+  const [modelId, setModelId] = useState(initialId || models.find(m => !m.registered)?.id || models[0].id)
+  const [apiKey, setApiKey] = useState('')
+
+  const submit = (e) => { e.preventDefault(); onClose() } // 목업: 저장하지 않음
+
+  return (
+    <div className="modal-overlay" onMouseDown={onClose}>
+      <div className="modal" onMouseDown={e => e.stopPropagation()}>
+        <div className="modal-head">
+          <span className="modal-title">새 모델 연결</span>
+          <button className="modal-x" onClick={onClose} aria-label="닫기">✕</button>
+        </div>
+        <form onSubmit={submit}>
+          <label className="modal-label">모델</label>
+          <select className="modal-select" value={modelId} onChange={e => setModelId(e.target.value)}>
+            {models.map(m => (
+              <option key={m.id} value={m.id}>
+                {m.name} · {m.vendor}{m.registered ? ' (등록됨)' : ''}
+              </option>
+            ))}
+          </select>
+
+          <label className="modal-label">API 키</label>
+          <input
+            className="modal-input" type="password" placeholder="sk-..."
+            value={apiKey} onChange={e => setApiKey(e.target.value)} autoFocus
+          />
+
+          <div className="modal-note">
+            🔧 지금은 미리보기입니다 — 실제 키 등록·검증은 백엔드 연동(BE-009) 후 지원됩니다.
+            입력한 키는 저장되지 않습니다.
+          </div>
+
+          <div className="modal-actions">
+            <button type="button" className="btn-ghost" onClick={onClose}>취소</button>
+            <button type="submit" className="btn-primary" disabled={!apiKey.trim()}>연결</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 export default function ModelPicker({ collapsed }) {
-  const [activeId, setActiveId] = useState(activeModelId)
+  const [activeId, setActiveId] = useState(() => {
+    try {
+      const saved = localStorage.getItem(MODEL_STORAGE_KEY)
+      // 저장된 값이 등록된 모델일 때만 복원 (미등록/삭제된 모델이면 기본값)
+      if (saved && models.some(m => m.id === saved && m.registered)) return saved
+    } catch { /* localStorage 접근 불가 시 무시 */ }
+    return activeModelId
+  })
   const [open, setOpen] = useState(false)
+  const [connectFor, setConnectFor] = useState(null) // null | modelId | 'new'
   const ref = useRef(null)
   const active = models.find(m => m.id === activeId)
+
+  // 선택 모델을 localStorage에 저장 → 새로고침 후에도 유지
+  useEffect(() => {
+    try { localStorage.setItem(MODEL_STORAGE_KEY, activeId) } catch { /* 무시 */ }
+  }, [activeId])
 
   // 바깥 클릭 시 메뉴 닫기
   useEffect(() => {
@@ -74,6 +134,13 @@ export default function ModelPicker({ collapsed }) {
     return () => document.removeEventListener('mousedown', onDoc)
   }, [open])
 
+  // 등록된 모델만 선택 가능. 미등록 모델은 선택 대신 연결 모달을 연다.
+  const selectModel = (m) => {
+    setOpen(false)
+    if (!m.registered) { setConnectFor(m.id); return }
+    setActiveId(m.id)
+  }
+
   const menu = (
     <div className={'model-menu' + (collapsed ? ' from-mini' : '')}>
       <div className="mm-title">AI 모델 선택</div>
@@ -81,7 +148,7 @@ export default function ModelPicker({ collapsed }) {
         <button
           key={m.id}
           className={'mm-item' + (m.id === activeId ? ' active' : '') + (!m.registered ? ' off' : '')}
-          onClick={() => { setActiveId(m.id); setOpen(false) }}
+          onClick={() => selectModel(m)}
         >
           <ModelTile m={m} size={28} />
           <span className="mm-name">{m.name}<span className="v">{m.vendor}</span></span>
@@ -90,8 +157,17 @@ export default function ModelPicker({ collapsed }) {
             : <span className="mm-off">등록 안됨</span>}
         </button>
       ))}
-      <div className="mm-foot">＋ 새 모델 연결 (API 키 등록)</div>
+      <button className="mm-foot" onClick={() => { setOpen(false); setConnectFor('new') }}>
+        ＋ 새 모델 연결 (API 키 등록)
+      </button>
     </div>
+  )
+
+  const modal = connectFor && (
+    <ConnectModal
+      initialId={connectFor === 'new' ? '' : connectFor}
+      onClose={() => setConnectFor(null)}
+    />
   )
 
   if (collapsed) {
@@ -101,6 +177,7 @@ export default function ModelPicker({ collapsed }) {
         <button className="model-mini" title={active.name + (active.registered ? ` · ${active.usage}%` : ' · 등록 안됨')} onClick={() => setOpen(o => !o)}>
           <ModelTile m={active} size={30} />
         </button>
+        {modal}
       </div>
     )
   }
@@ -123,6 +200,7 @@ export default function ModelPicker({ collapsed }) {
         </span>
         <span className="mc-caret">{open ? '⌃' : '⌄'}</span>
       </button>
+      {modal}
     </div>
   )
 }

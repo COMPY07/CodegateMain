@@ -1,218 +1,202 @@
 import { useEffect, useRef, useState } from 'react'
-import { agentRun, dashBars, csvData, samplePageHTML } from '../data/mockData.js'
+import { agentRun, samplePageHTML } from '../data/mockData.js'
+import CsvViewer from './CsvViewer.jsx'
+import Dashboard from './Dashboard.jsx'
+import AgentProgress from './AgentProgress.jsx'
 
-function LiveWeb({ questionMode, onPick }) {
+function LiveWeb({ questionMode, regionMode, onPick, onRegionPick, previewWidth, highlightGroups = [] }) {
   const iframeRef = useRef(null)
+  const [size, setSize] = useState({ w: 0, h: 0 })
 
-  // 질문모드 상태를 프리뷰(iframe)로 전달
+  // 프리뷰(iframe) 실제 렌더 크기 측정 → 현재 viewport 크기 표시
   useEffect(() => {
-    const send = () => iframeRef.current?.contentWindow?.postMessage(
-      { type: 'qmode', on: questionMode }, '*'
-    )
+    const el = iframeRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(() => setSize({ w: Math.round(el.clientWidth), h: Math.round(el.clientHeight) }))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  // 현재 도구 상태를 프리뷰(iframe)로 전달
+  useEffect(() => {
+    const send = () => {
+      const w = iframeRef.current?.contentWindow
+      w?.postMessage({ type: 'qmode', on: questionMode }, '*')
+      w?.postMessage({ type: 'region', on: regionMode }, '*')
+    }
     send()
     const t = setTimeout(send, 300) // iframe 로드 타이밍 보정
     return () => clearTimeout(t)
-  }, [questionMode])
+  }, [questionMode, regionMode])
 
-  // 프리뷰에서 온 pick 메시지 수신
+  // 프리뷰에서 온 pick / region 메시지 수신
   useEffect(() => {
     const onMsg = (e) => {
       const d = e.data || {}
-      if (d.source === 'vibe-preview' && d.type === 'pick') {
-        onPick({ label: d.label, selector: d.selector })
-      }
+      if (d.source !== 'vibe-preview') return
+      if (d.type === 'pick') onPick({ label: d.label, selector: d.selector })
+      else if (d.type === 'region') onRegionPick({ groupId: d.groupId, rect: d.rect, elements: d.elements })
     }
     window.addEventListener('message', onMsg)
     return () => window.removeEventListener('message', onMsg)
-  }, [onPick])
+  }, [onPick, onRegionPick])
 
+  // 살아있는 서클 선택 그룹을 iframe에 동기화 → 칩 삭제 시 파란 하이라이트 해제
+  useEffect(() => {
+    const send = () => iframeRef.current?.contentWindow?.postMessage(
+      { type: 'syncHighlights', keep: highlightGroups }, '*'
+    )
+    send()
+    const t = setTimeout(send, 300)
+    return () => clearTimeout(t)
+  }, [highlightGroups.join(',')])
+
+  const picking = questionMode || regionMode
+  const frameStyle = previewWidth ? { flex: 'none', width: previewWidth, maxWidth: '100%', margin: '0 auto' } : undefined
   return (
-    <div className="vp-frame">
+    <div className="vp-frame" style={frameStyle}>
       <div className="bchrome">
         <span className="bdot r" /><span className="bdot y" /><span className="bdot g" />
         <div className="burl">localhost:5173 · hot-reload</div>
+        <span className="vp-size">{size.w} × {size.h}</span>
       </div>
       {questionMode && (
         <div className="qmode-banner">✋ 질문 모드 — 화면 요소를 클릭하면 프롬프트에 들어갑니다</div>
       )}
+      {regionMode && (
+        <div className="qmode-banner">◯ 서클 투 서치 — 원을 그려 감싸면 그 요소들이 프롬프트에 들어갑니다</div>
+      )}
       <iframe
         ref={iframeRef}
-        className={'vp-iframe' + (questionMode ? ' picking' : '')}
+        className={'vp-iframe' + (picking ? ' picking' : '')}
         srcDoc={samplePageHTML}
         title="live-preview"
-        onLoad={() => iframeRef.current?.contentWindow?.postMessage({ type: 'qmode', on: questionMode }, '*')}
+        onLoad={() => {
+          const w = iframeRef.current?.contentWindow
+          w?.postMessage({ type: 'qmode', on: questionMode }, '*')
+          w?.postMessage({ type: 'region', on: regionMode }, '*')
+        }}
       />
     </div>
   )
 }
 
-const STATUS_META = {
-  done:    { label: '완료',   cls: 'done' },
-  running: { label: '진행중', cls: 'running' },
-  queued:  { label: '대기',   cls: 'queued' },
-}
-
-function StepTimeline({ steps }) {
-  return (
-    <div className="sc-steps">
-      {steps.map((s, i) => (
-        <div className="cot-step" key={i}>
-          <div className="cot-rail">
-            <div className={'cot-node ' + s.state} />
-            {i < steps.length - 1 && <div className="cot-line" />}
-          </div>
-          <div className="cot-body">
-            <div className="cot-head">{s.head}</div>
-            <div className="cot-thought">{s.thought}</div>
-            {s.tool && <div className="cot-tool">⚙ {s.tool}</div>}
-          </div>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function SubAgentCard({ sub }) {
-  const [open, setOpen] = useState(sub.status === 'running')
-  const meta = STATUS_META[sub.status] || STATUS_META.queued
-  const initial = sub.name.charAt(0)
-  return (
-    <div className={'subcard ' + meta.cls}>
-      <div className="sc-head">
-        <div className={'sc-av ' + meta.cls}>{initial}</div>
-        <div className="sc-name">
-          {sub.name}<span>{sub.role}</span>
-        </div>
-        <span className={'substatus ' + meta.cls}>
-          {sub.status === 'running' && <span className="pulsedot" />}
-          {sub.status === 'done' ? '✓ ' : ''}{meta.label}
-          {sub.elapsed !== '—' ? ' · ' + sub.elapsed : ''}
-        </span>
-      </div>
-
-      <div className="sc-bar"><i style={{ width: sub.progress + '%' }} /></div>
-
-      <div className="sc-current">
-        <span className="sc-order">순서 {sub.order}</span>
-        {sub.status === 'queued'
-          ? <span>선행: {sub.dependsOn}</span>
-          : <span>▸ {sub.current}</span>}
-        {sub.files.length > 0 && <span className="sc-file">{sub.files.join(', ')}</span>}
-      </div>
-
-      <button className="sc-toggle" onClick={() => setOpen(o => !o)}>
-        {open ? '▾' : '▸'} 사고 흐름 {sub.steps.length}단계
-      </button>
-      {open && <StepTimeline steps={sub.steps} />}
-    </div>
-  )
-}
-
-function AgentCoT() {
-  const { main, subs, title, runId } = agentRun
-  const counts = subs.reduce((a, s) => (a[s.status] = (a[s.status] || 0) + 1, a), {})
-  const [mainOpen, setMainOpen] = useState(true)
-
-  return (
-    <div className="vp-frame dark">
-      <div className="marun">
-        <div className="ma-head">
-          <div>
-            <div className="cot-title">◐ 멀티 에이전트 작업 현황</div>
-            <div className="ma-sub">실행 #{runId} · {title}</div>
-          </div>
-          <div className="ma-summary">
-            <span className="ma-chip done">완료 {counts.done || 0}</span>
-            <span className="ma-chip running">진행중 {counts.running || 0}</span>
-            <span className="ma-chip queued">대기 {counts.queued || 0}</span>
-          </div>
-        </div>
-
-        {/* 메인 에이전트 */}
-        <div className="ma-main">
-          <div className="sc-head">
-            <div className="sc-av main">O</div>
-            <div className="sc-name">{main.name}<span>{main.role}</span></div>
-            <span className="substatus running"><span className="pulsedot" />조율 중</span>
-            <button className="sc-toggle inline" onClick={() => setMainOpen(o => !o)}>
-              {mainOpen ? '접기 ▾' : '펼치기 ▸'}
-            </button>
-          </div>
-          {mainOpen && <StepTimeline steps={main.steps} />}
-        </div>
-
-        {/* 서브 에이전트 */}
-        <div className="ma-subs-label">서브 에이전트 · 동시 진행 <span>{subs.length}개</span></div>
-        <div className="ma-subs">
-          {subs.map(s => <SubAgentCard key={s.id} sub={s} />)}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function Dashboard() {
-  const max = Math.max(...dashBars.map(b => b.v))
-  return (
-    <div className="vp-frame dark">
-      <div className="dash">
-        <h2>대시보드</h2>
-        <div className="dash-grid">
-          <div className="stat"><div className="n">142</div><div className="l">실행한 작업</div></div>
-          <div className="stat"><div className="n green">80%</div><div className="l">토큰 절감(로컬 검수)</div></div>
-          <div className="stat"><div className="n amber">7</div><div className="l">예방한 보안 이슈</div></div>
-        </div>
-        <div className="dash-card">
-          <h3>일별 활동</h3>
-          <div className="bars">
-            {dashBars.map((b, i) => (
-              <div className="bar-col" key={i}>
-                <div className="bar-v" style={{ height: `${(b.v / max) * 100}%` }} />
-                <div className="bar-x">{b.x}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function CsvView() {
-  return (
-    <div className="vp-frame dark">
-      <div className="csv-wrap">
-        <table className="csv-table">
-          <thead><tr>{csvData.cols.map(c => <th key={c}>{c}</th>)}</tr></thead>
-          <tbody>
-            {csvData.rows.map((r, i) => (
-              <tr key={i}>{r.map((c, j) => <td key={j}>{c}</td>)}</tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  )
-}
-
 function PdfView() {
+  const fileInputRef = useRef(null)
+  const [pdfUrl, setPdfUrl] = useState('')
+  const [fileName, setFileName] = useState('')
+  const [page, setPage] = useState(1)
+  const [zoom, setZoom] = useState('page-width')
+  const [dragging, setDragging] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => () => {
+    if (pdfUrl) URL.revokeObjectURL(pdfUrl)
+  }, [pdfUrl])
+
+  const loadPdf = (file) => {
+    if (!file) return
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
+    if (!isPdf) {
+      setError('PDF 파일만 열 수 있습니다.')
+      return
+    }
+    setError('')
+    setFileName(file.name)
+    setPage(1)
+    setZoom('page-width')
+    setLoading(true)
+    setPdfUrl(URL.createObjectURL(file))
+  }
+
+  const onFileChange = (event) => {
+    loadPdf(event.target.files?.[0])
+    event.target.value = ''
+  }
+
+  const onDrop = (event) => {
+    event.preventDefault()
+    setDragging(false)
+    loadPdf(event.dataTransfer.files?.[0])
+  }
+
+  const adjustZoom = (amount) => {
+    const current = typeof zoom === 'number' ? zoom : 100
+    setZoom(Math.min(200, Math.max(25, current + amount)))
+  }
+
+  const viewerSrc = pdfUrl ? `${pdfUrl}#page=${page}&zoom=${zoom}` : ''
+
   return (
     <div className="vp-frame dark">
-      <div className="ph">
-        <div className="big">📄</div>
-        <div>report.pdf — 미리보기 (PDF 뷰어 연동 예정)</div>
+      <div className="pdf-view">
+        <input ref={fileInputRef} className="file-input-hidden" type="file" accept="application/pdf,.pdf" onChange={onFileChange} />
+        <div className="pdf-toolbar">
+          <button className="pdf-open" onClick={() => fileInputRef.current?.click()}>PDF 열기</button>
+          <span className="pdf-filename" title={fileName}>{fileName || '로컬 PDF를 선택하세요'}</span>
+          <span className="pdf-local-badge">로컬 전용</span>
+          <span className="pdf-spacer" />
+          <button disabled={!pdfUrl || page === 1} onClick={() => setPage(value => Math.max(1, value - 1))} aria-label="이전 페이지">‹</button>
+          <label className="pdf-page-label">
+            페이지
+            <input
+              type="number"
+              min="1"
+              value={page}
+              disabled={!pdfUrl}
+              onChange={event => setPage(Math.max(1, Number(event.target.value) || 1))}
+            />
+          </label>
+          <button disabled={!pdfUrl} onClick={() => setPage(value => value + 1)} aria-label="다음 페이지">›</button>
+          <span className="pdf-divider" />
+          <button disabled={!pdfUrl} onClick={() => adjustZoom(-25)} aria-label="축소">−</button>
+          <span className="pdf-zoom-label">{typeof zoom === 'number' ? `${zoom}%` : zoom === 'page-width' ? '너비 맞춤' : '페이지 맞춤'}</span>
+          <button disabled={!pdfUrl} onClick={() => adjustZoom(25)} aria-label="확대">+</button>
+          <button className={zoom === 'page-width' ? 'active' : ''} disabled={!pdfUrl} onClick={() => setZoom('page-width')}>너비</button>
+          <button className={zoom === 'page-fit' ? 'active' : ''} disabled={!pdfUrl} onClick={() => setZoom('page-fit')}>맞춤</button>
+        </div>
+
+        <div
+          className={'pdf-stage' + (dragging ? ' dragging' : '')}
+          onDragEnter={event => { event.preventDefault(); setDragging(true) }}
+          onDragOver={event => event.preventDefault()}
+          onDragLeave={event => { if (!event.currentTarget.contains(event.relatedTarget)) setDragging(false) }}
+          onDrop={onDrop}
+        >
+          {error && <div className="pdf-error" role="alert">{error}</div>}
+          {!pdfUrl ? (
+            <button className="pdf-empty" onClick={() => fileInputRef.current?.click()}>
+              <span className="big">📄</span>
+              <strong>PDF 파일을 선택하거나 여기에 놓으세요</strong>
+              <span>파일은 서버로 전송되지 않고 이 브라우저에서만 열립니다.</span>
+            </button>
+          ) : (
+            <>
+              {loading && <div className="pdf-loading">PDF를 여는 중…</div>}
+              <iframe
+                className="pdf-frame"
+                src={viewerSrc}
+                title={`${fileName} 미리보기`}
+                onLoad={() => setLoading(false)}
+                onError={() => { setLoading(false); setError('브라우저에서 PDF를 표시하지 못했습니다.') }}
+              />
+            </>
+          )}
+          {dragging && <div className="pdf-drop-overlay">여기에 PDF를 놓으세요</div>}
+        </div>
       </div>
     </div>
   )
 }
 
-export default function CenterViewport({ activeTab, questionMode, onPick }) {
+export default function CenterViewport({ activeTab, questionMode, regionMode, onPick, onRegionPick, previewWidth, previewReloadKey, highlightGroups }) {
   switch (activeTab) {
-    case 'live': return <LiveWeb questionMode={questionMode} onPick={onPick} />
-    case 'cot':  return <AgentCoT />
+    case 'live': return <LiveWeb key={previewReloadKey} questionMode={questionMode} regionMode={regionMode} onPick={onPick} onRegionPick={onRegionPick} previewWidth={previewWidth} highlightGroups={highlightGroups} />
+    case 'cot':  return <AgentProgress run={agentRun} />
     case 'dash': return <Dashboard />
-    case 'csv':  return <CsvView />
+    case 'csv':  return <CsvViewer />
     case 'pdf':  return <PdfView />
-    default:     return <LiveWeb questionMode={questionMode} onPick={onPick} />
+    default:     return <LiveWeb key={previewReloadKey} questionMode={questionMode} regionMode={regionMode} onPick={onPick} onRegionPick={onRegionPick} previewWidth={previewWidth} highlightGroups={highlightGroups} />
   }
 }

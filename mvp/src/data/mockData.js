@@ -38,11 +38,11 @@ export const activeModelId = 'claude'
 
 // ===== 상단 탭 =====
 export const tabs = [
-  { id: 'cot',   label: '에이전트 CoT', icon: '◐', pinned: false, dot: '#c084fc' },
-  { id: 'live',  label: '라이브 웹',    icon: '◧', pinned: true,  dot: '#34d399' },
-  { id: 'dash',  label: '대시보드',     icon: '▦', pinned: true,  dot: '#60a5fa' },
-  { id: 'pdf',   label: 'report.pdf',   icon: '📄', pinned: false, dot: '#fb7185' },
-  { id: 'csv',   label: 'data.csv',     icon: '▤', pinned: false, dot: '#fbbf24' },
+  { id: 'cot',   label: '에이전트 CoT', icon: '◐', pinned: false, dot: '#4f46e5' },
+  { id: 'live',  label: '라이브 웹',    icon: '◧', pinned: true,  dot: '#16a34a' },
+  { id: 'dash',  label: '대시보드',     icon: '▦', pinned: true,  dot: '#2563eb' },
+  { id: 'pdf',   label: 'report.pdf',   icon: '📄', pinned: false, dot: '#e11d48' },
+  { id: 'csv',   label: 'data.csv',     icon: '▤', pinned: false, dot: '#d97706' },
 ]
 
 // ===== 멀티 에이전트 작업 현황 (메인 + 서브에이전트) =====
@@ -171,7 +171,9 @@ export const samplePageHTML = `<!doctype html><html lang="ko"><head><meta charse
   </main>
 <script>
 (function(){
-  var picking=false, hl=null, lbl=null;
+  var picking=false, region=false, hl=null, lbl=null;
+  var dragging=false, pts=[], canvas=null, ctx=null;
+  var hgroups={}, hgId=0;   // 파란 하이라이트 그룹: id -> [{el, box}]
   function ensure(){
     if(!hl){
       hl=document.createElement('div');
@@ -181,6 +183,71 @@ export const samplePageHTML = `<!doctype html><html lang="ko"><head><meta charse
       lbl.style.cssText='position:fixed;pointer-events:none;z-index:99999;background:#7c3aed;color:#fff;font:700 12px -apple-system,sans-serif;padding:3px 9px;border-radius:6px;white-space:nowrap;display:none;box-shadow:0 4px 12px rgba(124,58,237,.5);';
       document.body.appendChild(lbl);
     }
+  }
+  // ===== 서클 투 서치용 캔버스(자유곡선) =====
+  function sizeCanvas(){ if(canvas){ canvas.width=window.innerWidth; canvas.height=window.innerHeight; } }
+  function ensureLasso(){
+    if(!canvas){
+      canvas=document.createElement('canvas');
+      canvas.style.cssText='position:fixed;inset:0;pointer-events:none;z-index:99996;display:none;';
+      document.body.appendChild(canvas); sizeCanvas(); ctx=canvas.getContext('2d');
+    }
+  }
+  function drawLasso(closed){
+    if(!ctx) return;
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    if(pts.length<2) return;
+    ctx.beginPath(); ctx.moveTo(pts[0].x,pts[0].y);
+    for(var i=1;i<pts.length;i++) ctx.lineTo(pts[i].x,pts[i].y);
+    if(closed){ ctx.closePath(); ctx.fillStyle='rgba(37,99,235,.10)'; ctx.fill(); }
+    ctx.strokeStyle='#2563eb'; ctx.lineWidth=2.5; ctx.lineJoin='round'; ctx.lineCap='round';
+    ctx.setLineDash([]); ctx.stroke();
+  }
+  function inPoly(x,y,poly){
+    var inside=false;
+    for(var i=0,j=poly.length-1;i<poly.length;j=i++){
+      var xi=poly[i].x, yi=poly[i].y, xj=poly[j].x, yj=poly[j].y;
+      if(((yi>y)!==(yj>y)) && (x < (xj-xi)*(y-yi)/(yj-yi)+xi)) inside=!inside;
+    }
+    return inside;
+  }
+  // 사각형이 그린 원(폴리곤)과 겹치는지 — 중심·네 모서리·라쏘 꼭짓점을 종합 판정
+  function hitsRect(r,poly){
+    if(!r||(r.width===0&&r.height===0)) return false;
+    var px=[r.left+r.width/2, r.left+2, r.right-2, r.left+2, r.right-2];
+    var py=[r.top+r.height/2, r.top+2, r.top+2, r.bottom-2, r.bottom-2];
+    for(var i=0;i<px.length;i++) if(inPoly(px[i],py[i],poly)) return true;
+    for(var j=0;j<poly.length;j++){ var p=poly[j];
+      if(p.x>=r.left&&p.x<=r.right&&p.y>=r.top&&p.y<=r.bottom) return true; }
+    return false;
+  }
+  // ===== 파란 하이라이트 박스 그룹 (실제 DOM 요소 참조로 관리) =====
+  function makeBox(){
+    var b=document.createElement('div');
+    b.style.cssText='position:fixed;pointer-events:none;z-index:99995;border:2px solid #2563eb;border-radius:6px;background:rgba(37,99,235,.10);box-shadow:0 0 0 1px rgba(37,99,235,.25);';
+    document.body.appendChild(b); return b;
+  }
+  function placeBox(b,el){
+    var r=repRect(el);   // 텍스트는 글자에, 박스는 박스에 딱 맞게 하이라이트
+    b.style.left=(r.left-2)+'px'; b.style.top=(r.top-2)+'px';
+    b.style.width=(r.width+4)+'px'; b.style.height=(r.height+4)+'px';
+  }
+  function highlightGroup(els){
+    var id=++hgId, arr=[];
+    for(var i=0;i<els.length;i++){ var b=makeBox(); placeBox(b,els[i]); arr.push({el:els[i],box:b}); }
+    hgroups[id]=arr; return id;
+  }
+  function removeGroup(id){
+    var g=hgroups[id]; if(!g) return;
+    for(var i=0;i<g.length;i++){ if(g[i].box.parentNode) g[i].box.parentNode.removeChild(g[i].box); }
+    delete hgroups[id];
+  }
+  function syncGroups(keep){
+    var set={}; for(var i=0;i<keep.length;i++) set[keep[i]]=1;
+    for(var id in hgroups){ if(!set[id]) removeGroup(id); }
+  }
+  function reposition(){
+    for(var id in hgroups){ var g=hgroups[id]; for(var i=0;i<g.length;i++) placeBox(g[i].box,g[i].el); }
   }
   function labelFor(el){
     if(!el||el===document.body||el===document.documentElement) return null;
@@ -205,6 +272,28 @@ export const samplePageHTML = `<!doctype html><html lang="ko"><head><meta charse
     }
     return parts.join(' > ');
   }
+  // 실제 렌더된 텍스트(글자)의 타이트한 사각형. 좌측정렬 블록에서도 글자 위를 정확히 가리킨다.
+  function contentRect(el){
+    try{
+      var range=document.createRange(); range.selectNodeContents(el);
+      var rr=range.getBoundingClientRect();
+      if(rr && (rr.width>0 || rr.height>0)) return rr;
+    }catch(e){}
+    return el.getBoundingClientRect();
+  }
+  // 판정/하이라이트에 쓸 기준 사각형:
+  //  - 인라인 텍스트 리프(제목·문단·링크·span 등, 자식 없음)는 글자 rect → 좌측정렬 텍스트도 정확히 잡힘
+  //  - 버튼·입력·박스 컨테이너(hero 등)는 요소 박스 → 박스를 감싸면 박스 전체가 하이라이트됨
+  //    ('자식 없음=텍스트' 휴리스틱은 자식 없는 박스 요소(button, .hero)를 오분류하므로 태그로 판정)
+  function isTextLeaf(el){
+    var tag=el.tagName.toLowerCase();
+    var text=(tag==='h1'||tag==='h2'||tag==='h3'||tag==='h4'||tag==='h5'||tag==='h6'||tag==='p'||tag==='a'||tag==='span'||tag==='li');
+    return text && (!el.children || el.children.length===0);
+  }
+  function repRect(el){
+    if(isTextLeaf(el)) return contentRect(el);
+    return el.getBoundingClientRect();
+  }
   function move(e){
     if(!picking) return; ensure();
     var el=e.target; var lab=labelFor(el);
@@ -222,13 +311,58 @@ export const samplePageHTML = `<!doctype html><html lang="ko"><head><meta charse
     parent.postMessage({source:'vibe-preview',type:'pick',label:lab,selector:pathFor(el)},'*');
     hl.style.transform='scale(1.04)'; setTimeout(function(){if(hl)hl.style.transform='';},120);
   }
+  // ===== 서클 투 서치 (자유곡선으로 원을 그려 감싼 요소 선택) =====
+  function rdown(e){
+    if(!region) return;
+    e.preventDefault(); ensureLasso();
+    dragging=true; pts=[{x:e.clientX,y:e.clientY}];
+    canvas.style.display='block'; drawLasso(false);
+  }
+  function rmove(e){
+    if(!region||!dragging) return;
+    pts.push({x:e.clientX,y:e.clientY}); drawLasso(false);
+  }
+  function rup(e){
+    if(!region||!dragging) return;
+    dragging=false; drawLasso(true);
+    // 그린 경로의 bounding box
+    var minX=1e9,minY=1e9,maxX=-1e9,maxY=-1e9;
+    for(var i=0;i<pts.length;i++){ var p=pts[i];
+      if(p.x<minX)minX=p.x; if(p.y<minY)minY=p.y; if(p.x>maxX)maxX=p.x; if(p.y>maxY)maxY=p.y; }
+    // 중심이 원 안에 들어온 요소 선택 (컨테이너 div뿐 아니라 텍스트 요소도 후보)
+    var els=[], nodes=document.querySelectorAll('[data-label], h1, h2, h3, h4, h5, h6, p, a, span, button, input, li');
+    for(var k=0;k<nodes.length;k++){
+      var n=nodes[k];
+      if(labelFor(n)==null) continue;                 // 의미 없는 요소 제외
+      if(pts.length<3) continue;
+      var br=n.getBoundingClientRect();               // 요소 박스
+      var tr=contentRect(n);                          // 실제 글자 사각형
+      // 박스 또는 글자 사각형이 그린 원과 겹치면 선택 (텍스트/박스 모두 견고)
+      if(hitsRect(br,pts) || hitsRect(tr,pts)) els.push(n);
+    }
+    // 그린 원 흔적 지우기
+    setTimeout(function(){ if(ctx) ctx.clearRect(0,0,canvas.width,canvas.height); if(canvas) canvas.style.display='none'; },160);
+    var groupId = els.length ? highlightGroup(els) : 0;
+    var payload=[]; for(var m=0;m<els.length;m++) payload.push({label:labelFor(els[m])||els[m].getAttribute('data-label'),selector:pathFor(els[m])});
+    parent.postMessage({source:'vibe-preview',type:'region',groupId:groupId,rect:{x:minX,y:minY,w:maxX-minX,h:maxY-minY},elements:payload},'*');
+  }
   window.addEventListener('mousemove',move,true);
   window.addEventListener('click',click,true);
+  window.addEventListener('mousedown',rdown,true);
+  window.addEventListener('mousemove',rmove,true);
+  window.addEventListener('mouseup',rup,true);
+  window.addEventListener('scroll',reposition,true);
+  window.addEventListener('resize',function(){ sizeCanvas(); reposition(); });
   window.addEventListener('message',function(e){
-    var d=e.data||{}; if(d.type==='qmode'){ picking=!!d.on; ensure();
+    var d=e.data||{};
+    if(d.type==='qmode'){ picking=!!d.on; ensure();
       if(!picking){ hl.style.display='none'; lbl.style.display='none'; }
-      document.body.style.cursor=picking?'crosshair':'';
     }
+    if(d.type==='region'){ region=!!d.on; ensureLasso();
+      if(!region){ dragging=false; if(ctx) ctx.clearRect(0,0,canvas.width,canvas.height); if(canvas) canvas.style.display='none'; }
+    }
+    if(d.type==='syncHighlights'){ syncGroups(d.keep||[]); }
+    document.body.style.cursor=(picking||region)?'crosshair':'';
   });
 })();
 <\/script>
