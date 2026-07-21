@@ -22,8 +22,19 @@ export const utilities = [
   { icon: '🛡', title: '로컬 코드 검수', desc: '함수 단위 · 온디바이스', badge: 'ON' },
   { icon: '🔎', title: '취약점 스캔', desc: '변경 diff 기준' },
   { icon: '🧩', title: 'MCP 도구', desc: '3개 연결됨' },
-  { icon: '📊', title: '토큰 사용량', desc: '이번 세션 12.4k' },
 ]
+
+// ===== 모델 (사용량 · 등록 여부) =====
+// registered:false 면 UI에서 "등록 안됨"으로 표시된다.
+export const models = [
+  { id: 'claude', name: 'Claude', vendor: 'Anthropic',  tile: '#D97757', registered: true,  usage: 32, tokens: '12.4k' },
+  { id: 'gpt',    name: 'GPT',    vendor: 'OpenAI',      tile: '#0f9d78', registered: true,  usage: 58, tokens: '22.1k' },
+  { id: 'gemini', name: 'Gemini', vendor: 'Google',      tile: 'linear-gradient(145deg,#4d8bf0,#9a72e6)', registered: false },
+  { id: 'grok',   name: 'Grok',   vendor: 'xAI',         tile: '#17171b', bordered: true, registered: false },
+  { id: 'kimi',   name: 'Kimi',   vendor: 'Moonshot AI', tile: '#2a2e55', bordered: true, registered: true,  usage: 11, tokens: '4.2k' },
+  { id: 'mimo',   name: 'MiMo',   vendor: 'Xiaomi',      tile: '#ff6a00', registered: false },
+]
+export const activeModelId = 'claude'
 
 // ===== 상단 탭 =====
 export const tabs = [
@@ -34,14 +45,59 @@ export const tabs = [
   { id: 'csv',   label: 'data.csv',     icon: '▤', pinned: false, dot: '#fbbf24' },
 ]
 
-// ===== 에이전트 CoT (사고 흐름) =====
-export const cotSteps = [
-  { state: 'done', head: '요청 분석', thought: 'URL 입력 필드를 더 크게 만들고 자동완성을 추가하라는 요청. 대상 컴포넌트는 AddressBar.tsx로 특정됨.', tool: null },
-  { state: 'done', head: '파일 로컬 검수 수신', thought: '로컬 LLM이 보낸 함수 요약을 확인: validateUrl(빈 입력 예외 누락), handleSubmit(미검증 입력 사용 — 보안).', tool: 'read digest ← local-llm' },
-  { state: 'done', head: '스타일 수정 계획', thought: 'url-bar의 height/font-size를 키우고, datalist 기반 자동완성을 추가. 기존 검증 로직은 보존.', tool: null },
-  { state: 'active', head: '코드 편집 중', thought: 'AddressBar.tsx의 입력 필드에 자동완성 속성과 확대 스타일을 적용하는 중…', tool: 'edit AddressBar.tsx:42' },
-  { state: 'pending', head: '검증 & Hot-reload', thought: '변경 후 로컬 검수 재실행 → 프리뷰 반영 예정.', tool: null },
-]
+// ===== 멀티 에이전트 작업 현황 (메인 + 서브에이전트) =====
+export const agentRun = {
+  title: '로그인 페이지 리팩터링 + 폼 검증 추가',
+  runId: 142,
+  main: {
+    name: '오케스트레이터',
+    role: 'Main Agent',
+    status: 'running',
+    steps: [
+      { state: 'done', head: '요청 분석', thought: '로그인 페이지를 심플하게 만들고 폼 검증을 추가하라는 요청. 대상 파일과 범위를 특정.', tool: null },
+      { state: 'done', head: '작업 분해 · 서브에이전트 3개 배정', thought: 'UI 빌더 · 폼 검증기 · 테스트 작성으로 병렬 분배. 검수기는 후속(선행 완료 후) 실행.', tool: 'spawn ×3' },
+      { state: 'active', head: '서브에이전트 조율 & 로컬 검수 수신', thought: '진행 상황을 취합하고 로컬 LLM 함수 요약을 각 서브에이전트에 전달하는 중.', tool: 'read digest ← local-llm' },
+      { state: 'pending', head: '결과 통합 → 검수 → Hot-reload', thought: '서브에이전트 완료 시 검수기 실행 후 프리뷰 반영 예정.', tool: null },
+    ],
+  },
+  subs: [
+    {
+      id: 'ui', name: 'UI 빌더', role: 'UI Builder', status: 'done', order: 1, progress: 100,
+      elapsed: '41s', files: ['LoginForm.tsx'], current: 'LoginForm.tsx 생성 완료',
+      steps: [
+        { state: 'done', head: '컴포넌트 계획', thought: '이메일·비밀번호 입력 + 로그인 버튼 구조 확정.' },
+        { state: 'done', head: 'JSX 작성', thought: '접근성 라벨 포함해 폼 마크업 작성.' },
+        { state: 'done', head: '스타일 적용', thought: '심플한 카드형 레이아웃으로 스타일링.' },
+      ],
+    },
+    {
+      id: 'val', name: '폼 검증기', role: 'Validator', status: 'running', order: 2, progress: 62,
+      elapsed: '0:23', files: ['validation.ts'], current: '비밀번호 규칙 작성 중 (3/5 필드)',
+      steps: [
+        { state: 'done', head: '검증 규칙 설계', thought: '필수·형식·길이 규칙 정의.' },
+        { state: 'done', head: '이메일 검증', thought: '정규식 기반 이메일 유효성 구현.' },
+        { state: 'active', head: '비밀번호 검증', thought: '최소 길이·문자 조합 규칙을 작성하는 중…', tool: 'edit validation.ts' },
+        { state: 'pending', head: '에러 메시지 연결', thought: '필드별 에러 표시 연결 예정.' },
+      ],
+    },
+    {
+      id: 'test', name: '테스트 작성', role: 'Test Writer', status: 'running', order: 2, progress: 38,
+      elapsed: '0:18', files: ['login.test.ts'], current: '로그인 성공 케이스 작성 중',
+      steps: [
+        { state: 'done', head: '케이스 도출', thought: '성공·실패·엣지 케이스 목록화.' },
+        { state: 'active', head: '성공 케이스', thought: '정상 로그인 플로우 테스트 작성 중…', tool: 'edit login.test.ts' },
+        { state: 'pending', head: '실패 케이스', thought: '잘못된 자격증명 테스트 예정.' },
+      ],
+    },
+    {
+      id: 'review', name: '검수기', role: 'Reviewer', status: 'queued', order: 3, progress: 0,
+      elapsed: '—', files: [], dependsOn: '폼 검증기 · 테스트 작성', current: '선행 작업 완료 대기 중',
+      steps: [
+        { state: 'pending', head: '변경 diff 검수', thought: '보안·누락·중복을 함수 단위로 점검 예정.' },
+      ],
+    },
+  ],
+}
 
 // ===== 우측 대화 (질문/답변) =====
 export const initialConversation = [

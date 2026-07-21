@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { fileTree, utilities } from '../data/mockData.js'
+import ModelPicker from './ModelPicker.jsx'
 
 function TreeNode({ node, depth }) {
   const [open, setOpen] = useState(node.open ?? false)
@@ -36,6 +37,8 @@ export default function LeftSidebar({ collapsed, onToggle }) {
           <div className="m" title="스캔">🔎</div>
           <div className="m" title="MCP">🧩</div>
         </div>
+        <div style={{ marginTop: 'auto' }} />
+        <ModelPicker collapsed />
       </aside>
     )
   }
@@ -70,6 +73,9 @@ export default function LeftSidebar({ collapsed, onToggle }) {
           ))}
         </div>
       </div>
+
+      {/* 하단: AI 모델 선택 + 사용량 */}
+      <ModelPicker />
     </aside>
   )
 }
