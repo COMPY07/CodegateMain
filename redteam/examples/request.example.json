@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0",
+  "signals": {
+    "user_prompt": "add a ping endpoint and a file download that runs shell commands",
+    "goals": ["shell command execution", "file upload/download"],
+    "model_output": "added os.system and child_process.exec handlers",
+    "security_hints": [
+      {"file": "app.py", "function": "ping", "possibility": 0.8, "priority": 1, "risk": "high", "note": "command surface flagged by merging LLM"}
+    ]
+  },
+  "project": {
+    "root": "tests/fixtures/projects/vuln_sample",
+    "include": ["**/*"],
+    "exclude": ["build/**", "node_modules/**"],
+    "changed_files": ["app.py"]
+  },
+  "backend": { "kind": "fake" },
+  "limits": { "max_regions": 20, "max_probes": 20, "max_findings": 20 }
+}

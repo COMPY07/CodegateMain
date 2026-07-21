@@ -1,0 +1,25 @@
+{
+  "name": "red_team",
+  "description": "Audit the code you just wrote or changed for security vulnerabilities. Call this after creating or modifying source files, especially anything that handles untrusted input: web request data, file paths, shell commands, SQL, deserialization, authentication, or cryptography. It returns ranked findings for the changed regions; fix every high/critical finding before continuing, then call this tool again on the changed files to confirm. The scanner's file:line locations are authoritative.",
+  "input_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "changed_files": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "Files you just created or modified, relative to the project root. Focuses and prioritizes the scan."
+      },
+      "goals": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "What this change is trying to accomplish, e.g. [\"add file upload\", \"shell command execution\"]. Helps target likely vulnerability classes."
+      },
+      "model_output": {
+        "type": "string",
+        "description": "A one or two sentence summary of what you just wrote or changed."
+      }
+    },
+    "required": ["changed_files"]
+  }
+}

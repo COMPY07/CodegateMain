@@ -1,0 +1,16 @@
+# build output
+/build*/
+/cmake-build-*/
+.cache/
+
+# macOS artifacts
+.DS_Store
+._*
+
+# editor / session
+.claude/
+.vscode/
+.idea/
+
+# local secrets
+*.local.json
