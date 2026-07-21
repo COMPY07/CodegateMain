@@ -1,0 +1,21 @@
+[project]
+name = "codegate-agent"
+version = "0.1.0"
+description = "Vibe Studio에 포함된 로컬 프로젝트·Claude Code·Codex 실행 런타임"
+requires-python = ">=3.10"
+dependencies = [
+  "claude-agent-sdk",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+# 하네스가 async 라 async 테스트가 필요하다. 런타임 의존성은 여전히 표준 라이브러리뿐이다.
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "SIM"]
