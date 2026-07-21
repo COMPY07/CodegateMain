@@ -23,6 +23,7 @@ from typing import Any
 MAIN_NAME = "오케스트레이터"
 MAIN_ROLE = "Main Agent"
 REVIEWER_ID = "review"
+ANALYSIS_ID = "analysis"
 
 # Tool name -> (step head, how to summarise the input as `thought`)
 _TOOL_LABELS: dict[str, str] = {
@@ -205,6 +206,64 @@ class AgentRunState:
         sub["progress"] = 100
         sub["status"] = "done"
         sub["current"] = reason
+
+    # ---- completion analysis -------------------------------------------------
+
+    def analysis_start(self, files: list[str] | None = None) -> None:
+        """Show the evidence engine as a distinct completion-time audit agent."""
+        sub = self._ensure_sub(ANALYSIS_ID, "증거 분석기", "Analysis Agent")
+        sub["status"] = "running"
+        sub["progress"] = 20
+        sub["current"] = "typed Proof 구성 중"
+        for rel_path in files or []:
+            if rel_path and rel_path not in sub["files"]:
+                sub["files"].append(rel_path)
+        sub["steps"].append(
+            {
+                "state": "active",
+                "head": "완료 시 증거 감사",
+                "thought": "index → inventory → typed Proof → prove/evidence/slice",
+                "tool": "VibeGate MCP",
+            }
+        )
+
+    def analysis_result(self, result: dict[str, Any]) -> None:
+        sub = self._ensure_sub(ANALYSIS_ID, "증거 분석기", "Analysis Agent")
+        verdict = str(result.get("overallVerdict") or "INCONCLUSIVE")
+        proofs = result.get("proofs") or []
+        counts = {
+            name: sum(p.get("verdict") == name for p in proofs)
+            for name in ("SUPPORTED", "REFUTED", "INCONCLUSIVE")
+        }
+        protocol = result.get("protocol") or {}
+        scan_findings = (result.get("scan") or {}).get("findings") or []
+        unsafe = verdict != "REFUTED" or not protocol.get("complete", False)
+        for step in reversed(sub["steps"]):
+            if step["state"] == "active":
+                step["state"] = "failed" if unsafe else "done"
+                step["thought"] = (
+                    f"{verdict} · Proof {len(proofs)}건 "
+                    f"(SUPPORTED {counts['SUPPORTED']}, REFUTED {counts['REFUTED']}, "
+                    f"INCONCLUSIVE {counts['INCONCLUSIVE']})"
+                    + (f" · 보조 scan {len(scan_findings)}건" if scan_findings else "")
+                )
+                break
+        sub["progress"] = 100
+        sub["status"] = "failed" if unsafe else "done"
+        sub["current"] = (
+            f"{verdict} · 확인 필요" if unsafe else "REFUTED · 경로 보호 증명"
+        )
+
+    def analysis_failed(self, reason: str) -> None:
+        sub = self._ensure_sub(ANALYSIS_ID, "증거 분석기", "Analysis Agent")
+        for step in reversed(sub["steps"]):
+            if step["state"] == "active":
+                step["state"] = "failed"
+                step["thought"] = f"분석 실행 실패: {reason}"
+                break
+        sub["progress"] = 100
+        sub["status"] = "failed"
+        sub["current"] = "분석 실행 실패"
 
     # ---- output ---------------------------------------------------------------
 

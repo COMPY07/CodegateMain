@@ -1,9 +1,8 @@
 """Claude Code harness (BE-004/BE-005) built on the Claude Agent SDK.
 
-This is the "Harness Core" from the product plan: the agent plans, edits real files
-in the workspace, and a PostToolUse hook runs the security gate on every Write/Edit.
-Findings are fed back to the agent via `additionalContext` so it fixes vulnerabilities
-in the same loop — the "생성 루프 중간에 보안 게이트 삽입" design.
+The coding agent plans and edits real workspace files. ``red_team_scan`` remains an
+optional development-time heuristic, while the VibeGate evidence auditor runs once,
+automatically, after the coding turn and before ``message_done``.
 
 Auth comes from the installed `claude` CLI login; no ANTHROPIC_API_KEY is required.
 Which is exactly why this runs on the **user's machine** and not the server: the login
@@ -33,6 +32,7 @@ from claude_agent_sdk import (
     tool,
 )
 
+from .analysis import AnalysisAgent, public_analysis_result
 from .run_state import AgentRunState
 from .scan import LocalScanner
 
@@ -59,8 +59,9 @@ not a terminal, and may attach on-screen element selections ("chips") to their r
 
 - Work in this project only. Keep changes scoped to what was asked.
 - Answer in Korean, concisely. The user reads your text in a chat panel.
-- Every file you write is automatically security-scanned. If the scan reports
-  high/critical findings, fix them immediately in the same turn, then continue.
+- `red_team_scan` is an optional development-time heuristic when you want a quick
+  adversarial check. The host automatically runs a separate typed-Proof evidence
+  analysis after your turn, so never invent its verdict in your response.
 - Do not hardcode secrets, interpolate untrusted input into shell/SQL/paths, or use eval.
 """
 
@@ -72,6 +73,7 @@ class AgentRun:
         self.state = AgentRunState(run_id, title)
         self.queue: asyncio.Queue[dict] = asyncio.Queue()
         self.rescans: dict[str, int] = {}
+        self.changed: list[str] = []
         self.findings: list[dict] = []
         self.prevented = 0
 
@@ -94,11 +96,13 @@ class ClaudeHarness:
         *,
         workspace: Path,
         scanner: LocalScanner,
+        analyzer: AnalysisAgent,
         model: str = "",
         max_rescans_per_file: int = 3,
     ):
         self._workspace = workspace
         self._scanner = scanner
+        self._analyzer = analyzer
         self._model = model
         self._max_rescans = max_rescans_per_file
         self._clients: dict[int, ClaudeSDKClient] = {}
@@ -254,9 +258,6 @@ class ClaudeHarness:
     # ---- client lifecycle -----------------------------------------------------
 
     def _build_options(self, session_id: int) -> ClaudeAgentOptions:
-        async def gate(input_data, tool_use_id, context):  # noqa: ANN001
-            return await self._run_security_gate(session_id, input_data)
-
         async def enforce_allowlist(input_data, tool_use_id, context):  # noqa: ANN001
             # The server has no human approver, so anything outside the allowlist is
             # denied instead of hanging on a permission prompt. This runs as a
@@ -289,9 +290,6 @@ class ClaudeHarness:
             mcp_servers={"codegate": self._build_mcp_server()},
             hooks={
                 "PreToolUse": [HookMatcher(hooks=[enforce_allowlist])],
-                "PostToolUse": [
-                    HookMatcher(matcher="Write|Edit|NotebookEdit", hooks=[gate])
-                ],
             },
         )
 
@@ -364,13 +362,39 @@ class ClaudeHarness:
             yield {"event": "error", "data": {"code": "agent_error", "message": str(e)}}
             return
 
+        analysis_result: dict[str, Any] | None = None
+        run.state.analysis_start(run.changed)
+        yield {"event": "run_update", "data": run.state.snapshot()}
+        try:
+            analysis_result = await self._analyzer.audit(
+                task=prompt,
+                changed_files=run.changed,
+            )
+            run.state.analysis_result(analysis_result)
+        except Exception as e:  # noqa: BLE001 - coding output must still be returned
+            logger.exception("completion analysis failed")
+            run.state.analysis_failed(str(e))
+            analysis_result = {
+                "engine": "vibegate",
+                "mode": "failed",
+                "overallVerdict": "INCONCLUSIVE",
+                "summary": str(e),
+                "proofs": [],
+                "scan": {},
+                "protocol": {"complete": False},
+            }
+
         run.state.finish("done")
         for ev in run.drain():
             yield ev
         yield {"event": "run_update", "data": run.state.snapshot()}
         yield {
             "event": "message_done",
-            "data": {"text": "".join(text_parts), "runId": run.state.run_id},
+            "data": {
+                "text": "".join(text_parts),
+                "runId": run.state.run_id,
+                "analysis": public_analysis_result(analysis_result),
+            },
         }
 
     def _record_usage(self, message: ResultMessage) -> None:
@@ -392,6 +416,14 @@ class ClaudeHarness:
                         events.append({"event": "delta", "data": {"text": block.text}})
                 elif isinstance(block, ToolUseBlock):
                     run.state.start_tool(block.id, block.name, block.input or {})
+                    if block.name in ("Write", "Edit", "NotebookEdit"):
+                        rel = self._relative_to_workspace(
+                            (block.input or {}).get("file_path")
+                            or (block.input or {}).get("notebook_path")
+                            or ""
+                        )
+                        if rel and rel not in run.changed:
+                            run.changed.append(rel)
                     events.append({"event": "run_update", "data": run.state.snapshot()})
         elif isinstance(message, UserMessage):
             for block in message.content or []:

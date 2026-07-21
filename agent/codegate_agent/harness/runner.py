@@ -13,6 +13,7 @@ from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any
 
+from .analysis import AnalysisAgent
 from .scan import LocalScanner
 
 logger = logging.getLogger(__name__)
@@ -69,6 +70,7 @@ class HarnessRunner:
         self._workspace = workspace
         self._backend_url = backend_url
         self._scanner = LocalScanner(workspace=workspace, backend_url=backend_url)
+        self._analyzer = AnalysisAgent(workspace=workspace)
         self._models = models or {}
         self._claude: Any = None
         self._codex: Any = None
@@ -82,6 +84,7 @@ class HarnessRunner:
             return
         self._workspace = project_dir
         self._scanner = LocalScanner(workspace=project_dir, backend_url=self._backend_url)
+        self._analyzer.use_workspace(project_dir)
         self._claude = None
         self._codex = None
 
@@ -97,6 +100,12 @@ class HarnessRunner:
             "workspace": str(self._workspace),
             "workspaceExists": self._workspace.is_dir(),
             "scanner": self._scanner.available,
+            "redTeam": {
+                "ready": self._scanner.available,
+                "trigger": "개발 중 수동 호출",
+                "role": "휴리스틱 공격 관점 점검",
+            },
+            "analysis": self._analyzer.status(),
             "models": {
                 "claude": claude_ready,
                 "gpt": codex_ready,
@@ -133,6 +142,7 @@ class HarnessRunner:
             self._claude = ClaudeHarness(
                 workspace=self._workspace,
                 scanner=self._scanner,
+                analyzer=self._analyzer,
                 model=self._models.get("claude", ""),
             )
         return self._claude
@@ -144,6 +154,7 @@ class HarnessRunner:
             self._codex = CodexHarness(
                 workspace=self._workspace,
                 scanner=self._scanner,
+                analyzer=self._analyzer,
                 model=self._models.get("gpt", ""),
             )
         return self._codex

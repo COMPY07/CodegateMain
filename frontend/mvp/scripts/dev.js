@@ -8,16 +8,35 @@ const here = dirname(fileURLToPath(import.meta.url))
 const frontendDir = resolve(here, '..')
 const repoDir = resolve(frontendDir, '..', '..')
 const runtimeDir = join(repoDir, 'agent')
+const analysisDir = join(repoDir, 'analysis')
+const analysisServer = join(analysisDir, 'packages', 'mcp-server', 'dist', 'server.js')
 const workspaceDir = join(repoDir, 'workspace')
 const runtimePort = process.env.CODEGATE_RUNTIME_PORT || '45456'
 const venvPython = process.platform === 'win32'
   ? join(runtimeDir, '.venv', 'Scripts', 'python.exe')
   : join(runtimeDir, '.venv', 'bin', 'python')
 
-function runSetup(command, args) {
-  const result = spawnSync(command, args, { cwd: runtimeDir, stdio: 'inherit' })
+function runSetup(command, args, cwd = runtimeDir) {
+  const result = spawnSync(command, args, { cwd, stdio: 'inherit' })
   if (result.error || result.status !== 0) {
     throw result.error || new Error(`${command} ${args.join(' ')} 실행에 실패했습니다.`)
+  }
+}
+
+function ensureAnalysis() {
+  if (!existsSync(join(analysisDir, 'package.json'))) {
+    throw new Error('analysis 브랜치 소스를 찾을 수 없습니다.')
+  }
+  const pnpm = process.env.PNPM || (process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm')
+  if (!existsSync(join(analysisDir, 'node_modules', '.bin', 'tsc'))) {
+    console.log('[Vibe Studio] 증거 분석 엔진 의존성을 설치합니다…')
+    runSetup(pnpm, ['install', '--frozen-lockfile'], analysisDir)
+  }
+  // dist는 생성물이므로 저장소에 넣지 않는다. 시작할 때 현재 소스로 다시 만든다.
+  console.log('[Vibe Studio] 증거 분석 엔진을 빌드합니다…')
+  runSetup(pnpm, ['build'], analysisDir)
+  if (!existsSync(analysisServer)) {
+    throw new Error('증거 분석 MCP 서버 빌드 결과를 찾을 수 없습니다.')
   }
 }
 
@@ -51,12 +70,14 @@ async function waitUntilReady(child) {
 }
 
 ensureRuntime()
+ensureAnalysis()
 
 const runtimeToken = randomBytes(32).toString('base64url')
 const childEnv = {
   ...process.env,
   CODEGATE_RUNTIME_PORT: runtimePort,
   CODEGATE_RUNTIME_TOKEN: runtimeToken,
+  VIBEGATE_ANALYSIS_ROOT: analysisDir,
 }
 const runtime = spawn(
   venvPython,

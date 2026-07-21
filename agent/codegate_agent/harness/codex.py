@@ -30,6 +30,7 @@ from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any
 
+from .analysis import AnalysisAgent, public_analysis_result
 from .run_state import AgentRunState
 from .scan import LocalScanner
 
@@ -43,7 +44,8 @@ CODEX_APPEND = """
 You are the coding agent inside Vibe Studio. The user drives you from a visual studio UI,
 not a terminal. Answer in Korean, concisely.
 
-Every file you write is automatically security-scanned. Do not hardcode secrets,
+The host automatically runs a separate typed-Proof evidence analysis after your turn.
+Do not invent that engine's verdict in your response. Do not hardcode secrets,
 interpolate untrusted input into shell/SQL/paths, or use eval.
 """
 
@@ -96,11 +98,13 @@ class CodexHarness:
         *,
         workspace: Path,
         scanner: LocalScanner,
+        analyzer: AnalysisAgent,
         model: str = "",
         max_rescans_per_file: int = 3,
     ):
         self._workspace = workspace
         self._scanner = scanner
+        self._analyzer = analyzer
         self._model = model
         self._max_rescans = max_rescans_per_file
         self._procs: dict[int, asyncio.subprocess.Process] = {}
@@ -341,27 +345,42 @@ class CodexHarness:
                              "message": stderr or "Codex 실행에 실패했습니다."},
                 }
 
-            # The gate runs after the turn: unlike Claude Code there is no hook to
-            # intercept a write mid-turn, so findings are fed back as a follow-up turn.
-            blocking: list[dict] = []
-            for rel in list(run.changed):
-                blocking += await self._run_gate(run, rel)
-                for queued in run.drain():
-                    yield queued
-
-            if blocking and run.thread_id:
-                async for ev in self._self_fix(run, cwd, blocking, text_parts, session_id):
-                    yield ev
         finally:
             self._procs.pop(session_id, None)
             if proc.returncode is None:
                 proc.kill()
 
+        analysis_result: dict[str, Any] | None = None
+        run.state.analysis_start(run.changed)
+        yield {"event": "run_update", "data": run.state.snapshot()}
+        try:
+            analysis_result = await self._analyzer.audit(
+                task=prompt,
+                changed_files=run.changed,
+            )
+            run.state.analysis_result(analysis_result)
+        except Exception as e:  # noqa: BLE001 - preserve the completed coding response
+            logger.exception("completion analysis failed")
+            run.state.analysis_failed(str(e))
+            analysis_result = {
+                "engine": "vibegate",
+                "mode": "failed",
+                "overallVerdict": "INCONCLUSIVE",
+                "summary": str(e),
+                "proofs": [],
+                "scan": {},
+                "protocol": {"complete": False},
+            }
+
         run.state.finish()
         yield {"event": "run_update", "data": run.state.snapshot()}
         yield {
             "event": "message_done",
-            "data": {"text": "".join(text_parts), "runId": run.state.run_id},
+            "data": {
+                "text": "".join(text_parts),
+                "runId": run.state.run_id,
+                "analysis": public_analysis_result(analysis_result),
+            },
         }
 
     async def _self_fix(
